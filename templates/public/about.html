@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}About — Envy Games{% endblock %}
+{% block content %}
+<section class="relative overflow-hidden">
+    <!-- soft background glow -->
+    <div class="pointer-events-none absolute inset-0 opacity-25">
+        <div
+            class="absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl bg-gradient-to-tr from-primary to-secondary">
+        </div>
+        <div
+            class="absolute -bottom-24 -right-24 h-72 w-72 rounded-full blur-3xl bg-gradient-to-tr from-secondary to-accent">
+        </div>
+    </div>
+
+    <div class="relative mx-auto max-w-4xl px-6 py-16">
+        <div class="rounded-2xl bg-base-100/60 backdrop-blur-sm shadow-lg ring-1 ring-base-300">
+            <div class="px-8 py-10 md:px-12 md:py-12">
+                <h1 class="text-3xl md:text-4xl font-extrabold">
+                    <span class="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                        About Envy Games
+                    </span>
+                </h1>
+
+                <p class="mt-4 text-base md:text-lg opacity-90">
+                    We’re a small, US-based team that loves building <span class="font-semibold">games</span>,
+                    crafting <span class="font-semibold">mods</span>, shipping useful <span
+                        class="font-semibold">software</span>,
+                    and creating <span class="font-semibold">game assets</span>. We prototype fast, iterate with
+                    players, and keep
+                    things performance-minded.
+                </p>
+
+                <!-- Stack badges -->
+                <div class="mt-6 flex flex-wrap gap-2">
+                    <span class="badge badge-outline">Unity</span>
+                    <span class="badge badge-outline">Blender & 3D Asset Creation Tools</span>
+                    <span class="badge badge-outline">Minecraft Java Mods - NeoForge and other Modloaders</span>
+                    <span class="badge badge-outline">Blockbench for Minecraft Assets</span>
+                    <span class="badge badge-outline">Aseprite & 2D Asset Creation Tools</span>
+                    <span class="badge badge-outline">Django & Webapps</span>
+                </div>
+
+                <!-- Principles -->
+                <div class="mt-8 grid gap-6 md:grid-cols-3">
+                    <div class="card bg-base-200/60">
+                        <div class="card-body p-6">
+                            <h3 class="card-title text-base">Gameplay First</h3>
+                            <p class="text-sm opacity-80">Fun, clarity, and feel take priority over feature bloat.</p>
+                        </div>
+                    </div>
+                    <div class="card bg-base-200/60">
+                        <div class="card-body p-6">
+                            <h3 class="card-title text-base">Mod-Friendly</h3>
+                            <p class="text-sm opacity-80">We design with extensibility in mind and share what we can.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="card bg-base-200/60">
+                        <div class="card-body p-6">
+                            <h3 class="card-title text-base">Build Fast, Polish</h3>
+                            <p class="text-sm opacity-80">Tight loops: prototype → playtest → refine → ship.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Links -->
+                <div class="mt-8 flex flex-wrap items-center gap-3">
+                    <a class="btn btn-primary" href="https://github.com/Envy-Games" target="_blank"
+                        rel="noopener">Follow on GitHub</a>
+                    <a class="btn btn-ghost" href="/contact/">Contact</a>
+                </div>
+
+                {% if user.is_authenticated %}
+                <div class="mt-6">
+                    <a class="btn btn-accent" href="/app/">Go to App</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Optional: basic Organization JSON-LD for SEO (safe & minimal) -->
+    <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Envy Games",
+    "url": "https://envy-games.com",
+    "sameAs": ["https://github.com/Envy-Games"]
+  }
+  </script>
+</section>
+{% endblock %}

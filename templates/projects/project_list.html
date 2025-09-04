@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% block title %}{% if scope == "mine" %}My Projects{% else %}All Projects{% endif %} — Envy Games{% endblock %}
+{% block content %}
+<div class="flex items-center justify-between gap-3 mb-6">
+    <div>
+        <h1 class="text-2xl md:text-3xl font-bold">
+            {% if scope == "mine" %}My Projects{% else %}All Projects{% endif %}
+        </h1>
+        <p class="opacity-70 text-sm">Browse, search, and filter.</p>
+    </div>
+    <div class="flex gap-2">
+        <a class="btn btn-ghost" href="{% url 'projects:home' %}">Overview</a>
+        {% if scope == "mine" %}
+        <a class="btn btn-ghost" href="{% url 'projects:list_all' %}">All</a>
+        {% else %}
+        <a class="btn btn-ghost" href="{% url 'projects:list_mine' %}">Mine</a>
+        {% endif %}
+        <a class="btn btn-primary" href="{% url 'projects:create' %}">New</a>
+    </div>
+</div>
+
+<form method="get" class="flex flex-col md:flex-row gap-3 mb-3" id="filters-form">
+    <div class="join w-full md:w-96">
+        <input class="input input-bordered join-item w-full" type="search" name="q" value="{{ current_q|default:'' }}"
+            placeholder="Search projects…" aria-label="Search projects" />
+        <button class="btn join-item" type="submit">Search</button>
+    </div>
+
+    <!-- JS will set the selected option based on data-current -->
+    <select class="select select-bordered" name="type" aria-label="Filter by type"
+        data-current="{{ current_type|default:'' }}" onchange="this.form.submit()">
+        <option value="">Type (all)</option>
+        {% for val,label in TYPE_CHOICES %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+
+    <select class="select select-bordered" name="status" aria-label="Filter by status"
+        data-current="{{ current_status|default:'' }}" onchange="this.form.submit()">
+        <option value="">Status (all)</option>
+        {% for val,label in STATUS_CHOICES %}
+        <option value="{{ val }}">{{ label }}</option>
+        {% endfor %}
+    </select>
+
+    {% if current_q or current_type or current_status %}
+    <a href="?q=&type=&status=" class="btn btn-ghost" aria-label="Clear filters">Reset</a>
+    {% endif %}
+</form>
+
+{% if current_q or current_type or current_status %}
+<div class="mb-4 flex flex-wrap gap-2 items-center">
+    <span class="text-sm opacity-70">Active filters:</span>
+    {% if current_q %}<span class="badge badge-outline">q: “{{ current_q }}”</span>{% endif %}
+    {% if current_type %}<span class="badge badge-outline">type: {{ current_type }}</span>{% endif %}
+    {% if current_status %}<span class="badge badge-outline">status: {{ current_status }}</span>{% endif %}
+</div>
+{% endif %}
+
+<div class="grid gap-3">
+    {% for p in projects %}
+    <a href="{{ p.get_absolute_url }}" class="card bg-base-100 hover:bg-base-200 transition">
+        <div class="card-body p-4">
+            <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <h2 class="card-title text-lg truncate">{{ p.name }}</h2>
+                    <p class="text-sm opacity-70">{{ p.get_type_display }} • {{ p.get_status_display }}</p>
+                </div>
+                <span class="badge whitespace-nowrap">{{ p.owner }}</span>
+            </div>
+        </div>
+    </a>
+    {% empty %}
+    <div class="alert">
+        <div>
+            <h3 class="font-bold">No projects found.</h3>
+            <div class="text-sm opacity-80">Try adjusting your filters, or create a new project.</div>
+        </div>
+        <div class="ml-auto">
+            <a class="btn btn-primary btn-sm" href="{% url 'projects:create' %}">New Project</a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div class="join mt-6">
+    {% if page_obj.has_previous %}
+    <a class="btn join-item"
+        href="?page={{ page_obj.previous_page_number }}&q={{ current_q|urlencode }}&type={{ current_type|urlencode }}&status={{ current_status|urlencode }}">Prev</a>
+    {% else %}
+    <button class="btn btn-disabled join-item">Prev</button>
+    {% endif %}
+
+    <span class="btn join-item">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+    <a class="btn join-item"
+        href="?page={{ page_obj.next_page_number }}&q={{ current_q|urlencode }}&type={{ current_type|urlencode }}&status={{ current_status|urlencode }}">Next</a>
+    {% else %}
+    <button class="btn btn-disabled join-item">Next</button>
+    {% endif %}
+</div>
+{% endif %}
+
+{% block scripts %}
+<script>
+    (function () {
+        var selects = document.querySelectorAll('select[data-current]');
+        for (var i = 0; i < selects.length; i++) {
+            var sel = selects[i];
+            var curr = sel.getAttribute('data-current') || '';
+            if (curr) sel.value = curr;
+        }
+    })();
+</script>
+{% endblock %}
+{% endblock %}

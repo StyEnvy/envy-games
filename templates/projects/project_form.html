@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}New Project — Envy Games{% endblock %}
+{% block content %}
+<h1 class="text-2xl md:text-3xl font-bold mb-6">New Project</h1>
+
+<form method="post" class="max-w-2xl space-y-4">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+
+    <div class="form-control">
+        <label class="label"><span class="label-text">Name</span></label>
+        {{ form.name }}
+        <label class="label"><span class="label-text-alt opacity-70">{{ form.fields.name.help_text }}</span></label>
+        {{ form.name.errors }}
+    </div>
+
+    <div class="form-control">
+        <label class="label"><span class="label-text">Type</span></label>
+        {{ form.type }}
+        {{ form.type.errors }}
+    </div>
+
+    <div class="form-control">
+        <label class="label"><span class="label-text">Status</span></label>
+        {{ form.status }}
+        {{ form.status.errors }}
+    </div>
+
+    <div class="form-control">
+        <label class="label"><span class="label-text">Description</span></label>
+        {{ form.description }}
+        {{ form.description.errors }}
+    </div>
+
+    <div class="flex gap-2">
+        <button class="btn btn-primary" type="submit">Create</button>
+        <a class="btn btn-ghost" href="{% url 'projects:list_mine' %}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

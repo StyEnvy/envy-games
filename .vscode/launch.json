@@ -1,0 +1,15 @@
+﻿{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Django: dev server",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/manage.py",
+      "args": ["runserver", "0.0.0.0:8000"],
+      "django": true,
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env"
+    }
+  ]
+}

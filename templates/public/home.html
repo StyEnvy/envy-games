@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Envy Games — Studio{% endblock %}
+{% block content %}
+<section class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 opacity-30">
+        <div
+            class="absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl bg-gradient-to-tr from-primary to-secondary">
+        </div>
+        <div
+            class="absolute -bottom-24 -right-24 h-72 w-72 rounded-full blur-3xl bg-gradient-to-tr from-secondary to-accent">
+        </div>
+    </div>
+
+    <div class="relative mx-auto max-w-4xl px-6 py-20 text-center">
+        <div class="mx-auto max-w-2xl rounded-2xl bg-base-100/60 backdrop-blur-sm shadow-lg ring-1 ring-base-300">
+            <div class="px-8 py-12">
+                <h1 class="text-4xl md:text-5xl font-extrabold leading-tight">
+                    <span class="bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                        Envy Games
+                    </span>
+                </h1>
+                <p class="mt-4 text-base md:text-lg opacity-80">
+                    We’re a small US based team who love making <span class="font-semibold">games</span> in Unity,
+                    crafting <span class="font-semibold">mods</span> for various games such as Minecraft Java Edition,
+                    creating <span class="font-semibold">game
+                        assets</span> with Blender & Blockbench, and building <span
+                        class="font-semibold">software</span> such as discord bots, web
+                    apps, and game server management tools.
+                </p>
+
+                <div class="mt-6 flex flex-wrap items-center justify-center gap-2">
+                    <span class="badge badge-outline">Games</span>
+                    <span class="badge badge-outline">Mods</span>
+                    <span class="badge badge-outline">Software</span>
+                    <span class="badge badge-outline">Assets</span>
+                </div>
+
+                <!-- public/home.html (landing) -->
+                {% if user.is_authenticated %}
+                <a class="btn btn-primary mt-8" href="{% url 'dashboard:home' %}">Your Dashboard</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,121 @@
+﻿<!doctype html>
+<html data-theme="dark">
+
+<head>
+  <meta charset="utf-8">
+  <title>{% block title %}Envy Games{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { plugins: [] }</script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" />
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+
+  {% load static %}
+  <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+
+  {% block head %}{% endblock %}
+</head>
+
+<body class="min-h-screen bg-base-200 text-base-content flex flex-col">
+  <!-- Fixed, consistent navbar (64px) -->
+  <header
+    class="fixed top-0 inset-x-0 z-50 bg-base-100/95 backdrop-blur supports-[backdrop-filter]:bg-base-100/80 shadow">
+    <div class="navbar h-16 container mx-auto px-3">
+      <!-- Left: Brand -->
+      <div class="flex-1 min-w-0">
+        <a href="/" class="px-1 normal-case whitespace-nowrap leading-none tracking-tight
+                           text-2xl md:text-3xl font-extrabold
+                           bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent
+                           hover:opacity-90 transition-opacity">
+          Envy Games
+        </a>
+      </div>
+
+      <!-- Mobile: hamburger -->
+      <div class="flex-none md:hidden">
+        <details class="dropdown dropdown-end">
+          <summary class="btn btn-ghost btn-sm" aria-label="Open menu">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </summary>
+          <ul class="menu menu-sm dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-44">
+            {% if user.is_authenticated %}
+            <li><a href="{% url 'dashboard:home' %}" class="active:!bg-primary/10">Dashboard</a></li>
+            <li><a href="/admin/" class="active:!bg-primary/10">Admin</a></li>
+            <li>
+              <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                class="text-error hover:text-error">
+                Logout
+              </a>
+            </li>
+            {% else %}
+            <li><a href="{% url 'login' %}" class="active:!bg-primary/10">Login</a></li>
+            {% endif %}
+          </ul>
+        </details>
+      </div>
+
+      <!-- Desktop: right menu -->
+      <nav class="flex-none hidden md:flex">
+        <ul class="menu menu-horizontal h-16 items-center gap-1">
+          {% if user.is_authenticated %}
+          <li class="h-16">
+            <a href="{% url 'dashboard:home' %}"
+              class="h-full px-3 rounded-btn flex items-center
+                        hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
+              Dashboard
+            </a>
+          </li>
+          <li class="h-16">
+            <a href="/admin/"
+              class="h-full px-3 rounded-btn flex items-center
+                        hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
+              Admin
+            </a>
+          </li>
+          <li class="h-16">
+            <a href="#" class="h-full px-3 rounded-btn flex items-center text-error hover:bg-error/10
+                        focus-visible:outline-none focus-visible:ring focus-visible:ring-error/40"
+              onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+              Logout
+            </a>
+            <form method="post" action="{% url 'logout' %}" id="logout-form" class="hidden">
+              {% csrf_token %}
+            </form>
+          </li>
+          {% else %}
+          <li class="h-16">
+            <a href="{% url 'login' %}"
+              class="h-full px-3 rounded-btn flex items-center
+                        hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
+              Login
+            </a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Content: top padding matches header height -->
+  <main class="container mx-auto px-4 pt-20 md:pt-24 flex-1">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="mt-8 border-t border-base-300 bg-base-100">
+    <div class="container mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div class="text-sm opacity-70">&copy; {% now "Y" %} Envy Games. All rights reserved.</div>
+      <nav class="text-sm">
+        <a class="link link-hover mr-4" href="/about/">About</a>
+        <a class="link link-hover mr-4" href="/privacy/">Privacy</a>
+        <a class="link link-hover" href="/contact/">Contact</a>
+      </nav>
+    </div>
+  </footer>
+
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Logged out · Envy Games{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto card bg-base-100 shadow">
+    <div class="card-body">
+        <h1 class="card-title">You’ve been logged out.</h1>
+        <a class="btn btn-primary mt-2" href="{% url 'login' %}">Sign in again</a>
+    </div>
+</div>
+{% endblock %}

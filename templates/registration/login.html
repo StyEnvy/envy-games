@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Login · Envy Games{% endblock %}
+{% block content %}
+<div class="max-w-md mx-auto card bg-base-100 shadow">
+    <div class="card-body">
+        <h1 class="card-title">Login</h1>
+        {% if form.errors %}<div class="alert alert-error">Invalid credentials.</div>{% endif %}
+        <form method="post" action="{% url 'login' %}">
+            {% csrf_token %}
+            <div class="form-control">
+                <label class="label"><span class="label-text">Username</span></label>
+                {{ form.username }}
+            </div>
+            <div class="form-control mt-2">
+                <label class="label"><span class="label-text">Password</span></label>
+                <div class="relative">
+                    {{ form.password }}
+                    <button type="button" class="absolute inset-y-0 right-0 px-3 text-sm text-primary"
+                        onclick="togglePassword()">Show</button>
+                </div>
+            </div>
+            <input type="hidden" name="next" value="{{ next }}">
+            <button class="btn btn-primary mt-4" type="submit">Sign in</button>
+        </form>
+        <div class="mt-2 text-sm">
+            <a class="link" href="{% url 'password_reset' %}">Forgot password?</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function togglePassword() {
+        const pwd = document.getElementById("id_password");
+        const btn = event.currentTarget;
+        if (pwd.type === "password") {
+            pwd.type = "text";
+            btn.textContent = "Hide";
+        } else {
+            pwd.type = "password";
+            btn.textContent = "Show";
+        }
+    }
+</script>
+{% endblock %}

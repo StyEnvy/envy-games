@@ -1,0 +1,44 @@
+﻿{% extends "base.html" %}
+{% block title %}Dashboard — Envy Games{% endblock %}
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title">Active Projects</h2>
+      <p class="text-sm opacity-75">Quick overview of your studio work.</p>
+      <div id="projects-list">
+        <p class="opacity-60">
+          No projects yet.
+          <a class="link" href="{% url 'projects:home' %}">Go to Projects</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title">My Tasks</h2>
+      <p class="opacity-60">Assigned to you.</p>
+      <div id="tasks-list">
+        <p class="opacity-60">
+          No tasks yet.
+          <a class="link" href="/app/tasks/">Open boards</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title">Assets</h2>
+      <p class="opacity-60">Latest uploads.</p>
+      <div id="assets-list">
+        <p class="opacity-60">
+          No assets yet.
+          <a class="link" href="/app/assets/">Browse assets</a>.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

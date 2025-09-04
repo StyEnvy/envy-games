@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Privacy — Envy Games{% endblock %}
+{% block content %}
+<section class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 opacity-20">
+        <div
+            class="absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl bg-gradient-to-tr from-primary to-secondary">
+        </div>
+        <div
+            class="absolute -bottom-24 -right-24 h-72 w-72 rounded-full blur-3xl bg-gradient-to-tr from-secondary to-accent">
+        </div>
+    </div>
+
+    <div class="relative mx-auto max-w-4xl px-6 py-12">
+        <h1 class="text-3xl md:text-4xl font-extrabold mb-6">Privacy</h1>
+        <p class="opacity-90">
+            This policy describes how Envy Games (“we”, “us”) collects, uses, and protects information across our
+            website and studio app.
+        </p>
+
+        <!-- Quick nav -->
+        <div class="mt-6 grid gap-2 sm:grid-cols-2">
+            <a href="#who" class="btn btn-ghost btn-sm justify-start">Who we are & scope</a>
+            <a href="#data" class="btn btn-ghost btn-sm justify-start">Data we collect</a>
+            <a href="#use" class="btn btn-ghost btn-sm justify-start">How we use data</a>
+            <a href="#legal" class="btn btn-ghost btn-sm justify-start">Legal bases</a>
+            <a href="#cookies" class="btn btn-ghost btn-sm justify-start">Cookies & local storage</a>
+            <a href="#sharing" class="btn btn-ghost btn-sm justify-start">Sharing & processors</a>
+            <a href="#security" class="btn btn-ghost btn-sm justify-start">Security</a>
+            <a href="#retention" class="btn btn-ghost btn-sm justify-start">Retention</a>
+            <a href="#rights" class="btn btn-ghost btn-sm justify-start">Your rights</a>
+            <a href="#children" class="btn btn-ghost btn-sm justify-start">Children</a>
+            <a href="#changes" class="btn btn-ghost btn-sm justify-start">Changes</a>
+            <a href="#contact" class="btn btn-ghost btn-sm justify-start">Contact</a>
+        </div>
+
+        <section id="who" class="mt-10">
+            <h2 class="text-xl font-bold">Who we are & scope</h2>
+            <p class="mt-2 opacity-90">
+                Envy Games is a US-based team building games, game mods, software, and game assets. This policy applies
+                to:
+            </p>
+            <ul class="list-disc ml-6 mt-2 opacity-90">
+                <li>Our website.</li>
+                <li>Our studio apps.</li>
+                <li>Our games and related apps.</li>
+            </ul>
+        </section>
+
+        <section id="data" class="mt-10">
+            <h2 class="text-xl font-bold">Data we collect</h2>
+            <div class="mt-4 grid gap-4">
+                <div class="card bg-base-200/60">
+                    <div class="card-body p-6">
+                        <h3 class="card-title text-base">Account & authentication</h3>
+                        <ul class="list-disc ml-6 opacity-90">
+                            <li>Username and hashed password (never plain text).</li>
+                            <li>Optional email for notifications or recovery.</li>
+                            <li>MFA data such as TOTP secrets or WebAuthn/passkey public key credentials.</li>
+                            <li>Session identifiers and CSRF tokens.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card bg-base-200/60">
+                    <div class="card-body p-6">
+                        <h3 class="card-title text-base">Logs & diagnostics</h3>
+                        <ul class="list-disc ml-6 opacity-90">
+                            <li>Server logs (IP address, user agent, timestamps, URLs, response codes).</li>
+                            <li>Error reports and performance metrics (e.g., request timing).</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card bg-base-200/60">
+                    <div class="card-body p-6">
+                        <h3 class="card-title text-base">Voluntary communications</h3>
+                        <ul class="list-disc ml-6 opacity-90">
+                            <li>Messages sent via contact forms or email and your replies.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card bg-base-200/60">
+                    <div class="card-body p-6">
+                        <h3 class="card-title text-base">Payments/commerce</h3>
+                        <p class="opacity-90">
+                            For purchases or donations, payment data is processed by a PCI-compliant provider. We do not
+                            store payment information on our servers.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="use" class="mt-10">
+            <h2 class="text-xl font-bold">How we use data</h2>
+            <ul class="list-disc ml-6 mt-2 opacity-90">
+                <li>Authenticate users, maintain sessions, and secure the app (MFA/passkeys, CSRF).</li>
+                <li>Provide support and respond to requests.</li>
+                <li>Monitor reliability, debug issues, and prevent abuse.</li>
+                <li>Comply with legal obligations and enforce terms.</li>
+            </ul>
+        </section>
+
+        <section id="legal" class="mt-10">
+            <h2 class="text-xl font-bold">Legal bases (where applicable)</h2>
+            <ul class="list-disc ml-6 mt-2 opacity-90">
+                <li><span class="font-semibold">Contract:</span> To provide the services you use (account, studio
+                    features).</li>
+                <li><span class="font-semibold">Legitimate interests:</span> Security, fraud prevention, and improving
+                    our tools.</li>
+                <li><span class="font-semibold">Consent:</span> Where we explicitly ask (e.g., marketing emails or beta
+                    tracking).</li>
+                <li><span class="font-semibold">Legal obligation:</span> When laws require us to retain or disclose
+                    limited data.</li>
+            </ul>
+        </section>
+
+        <section id="cookies" class="mt-10">
+            <h2 class="text-xl font-bold">Cookies & local storage</h2>
+            <p class="mt-2 opacity-90">
+                We use strictly necessary cookies for login sessions and security (e.g., sessionid, csrftoken). We may
+                also use optional analytics cookies or local storage to understand site usage; these will be documented
+                and, where required, offered with consent controls.
+            </p>
+        </section>
+
+        <section id="sharing" class="mt-10">
+            <h2 class="text-xl font-bold">Sharing & processors</h2>
+            <p class="mt-2 opacity-90">
+                We don’t sell personal information. We may share limited data with service providers that help us
+                operate our site/app (e.g., hosting, error monitoring, email). When used, processors are bound by
+                contracts and only process data on our instructions.
+            </p>
+            <ul class="list-disc ml-6 mt-2 opacity-90">
+                <li>Hosting & infrastructure (e.g., servers, CDN, databases).</li>
+                <li>Error/monitoring and logs (to debug problems efficiently).</li>
+                <li>Email delivery (transactional messages, if enabled).</li>
+                <li>Version control and collaboration (e.g., GitHub for code and issue tracking).</li>
+            </ul>
+            <p class="mt-2 opacity-90">
+                If legally required (e.g., valid court order), we may disclose information to authorities.
+            </p>
+        </section>
+
+        <section id="security" class="mt-10">
+            <h2 class="text-xl font-bold">Security</h2>
+            <ul class="list-disc ml-6 mt-2 opacity-90">
+                <li>Hashed passwords; support for MFA and passkeys/WebAuthn.</li>
+                <li>Least-privilege access, audit logs, and environment-scoped secrets.</li>
+                <li>Transport encryption (HTTPS) and hardened defaults where available.</li>
+            </ul>
+            <p class="mt-2 opacity-90">
+                No system is perfectly secure; if we learn of a breach, we’ll take appropriate steps and notify affected
+                users when required.
+            </p>
+        </section>
+
+        <section id="retention" class="mt-10">
+            <h2 class="text-xl font-bold">Retention</h2>
+            <p class="mt-2 opacity-90">
+                We keep data for as long as needed to provide the service and for legitimate business or legal purposes.
+                Examples: session logs (short-term), error logs (short to medium), studio content (until deleted by an
+                authorized user or per project lifecycle policies). We may anonymize or aggregate data for longer-term
+                analytics.
+            </p>
+        </section>
+
+        <section id="rights" class="mt-10">
+            <h2 class="text-xl font-bold">Your rights</h2>
+            <p class="mt-2 opacity-90">
+                Depending on your location, you may have rights to access, correct, export, or delete your data,
+                restrict or opt out of certain processing, or lodge a complaint with a regulator. For requests, use the
+                contact details below. We’ll verify identity before fulfilling account-level actions.
+            </p>
+        </section>
+
+        <section id="children" class="mt-10">
+            <h2 class="text-xl font-bold">Children</h2>
+            <p class="mt-2 opacity-90">
+                Our services aren’t directed to children under the age required by local law. We don’t knowingly collect
+                personal data from such users; if you believe we have, contact us to request deletion.
+            </p>
+        </section>
+
+        <section id="changes" class="mt-10">
+            <h2 class="text-xl font-bold">Changes to this policy</h2>
+            <p class="mt-2 opacity-90">
+                We may update this policy as our products evolve. We’ll post the revised version here and update the
+                effective date.
+            </p>
+            <p class="mt-2 text-sm opacity-70">Effective date: {% now "F j, Y" %}</p>
+        </section>
+
+        <section id="contact" class="mt-10">
+            <h2 class="text-xl font-bold">Contact</h2>
+            <p class="mt-2 opacity-90">
+                Questions or privacy requests: <a class="link" href="/contact/">contact us</a>.
+            </p>
+        </section>
+    </div>
+</section>
+{% endblock %}

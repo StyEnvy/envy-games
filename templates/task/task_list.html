@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{% if project %}Tasks • {{ project.name }}{% else %}All Tasks{% endif %} • Envy Games{% endblock %}
+{% block content %}
+<div class="container mx-auto p-4 pt-20">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-semibold">{% if project %}Tasks in {{ project.name }}{% else %}All Tasks{% endif %}
+        </h1>
+        {% if project %}
+        <a class="btn btn-primary" href="{% url 'tasks:task_create' project.slug %}">New Task</a>
+        {% endif %}
+    </div>
+
+    {% if tasks %}
+    <div class="grid gap-3">
+        {% for t in tasks %}
+        <a href="{% url 'tasks:task_detail' t.pk %}" class="card bg-base-100 hover:shadow-md transition">
+            <div class="card-body p-4">
+                <div class="flex items-center justify-between">
+                    <div class="font-medium">{{ t.title }}</div>
+                    <div class="text-sm opacity-70">
+                        {% if t.get_status_display %}{{ t.get_status_display }}{% else %}{{ t.status }}{% endif %}
+                    </div>
+                </div>
+                <div class="text-sm opacity-70">
+                    {{ t.project.name }}
+                    {% if t.priority %} • P{{ t.priority }}{% endif %}
+                    {% if t.assignee %} • {{ t.assignee.username }}{% endif %}
+                </div>
+                {% if t.labels.all %}
+                <div class="mt-1">
+                    {% for label in t.labels.all %}<span class="badge mr-1">{{ label.name }}</span>{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <div class="join mt-6">
+        {% if page_obj.has_previous %}
+        <a class="btn join-item" href="?page={{ page_obj.previous_page_number }}">« Prev</a>
+        {% endif %}
+        <button class="btn join-item">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</button>
+        {% if page_obj.has_next %}
+        <a class="btn join-item" href="?page={{ page_obj.next_page_number }}">Next »</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="alert">No tasks yet.</div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,6 @@
+﻿{
+  "python.defaultInterpreterPath": "${workspaceFolder}\\.venv\\Scripts\\python.exe",
+  "python.testing.unittestEnabled": true,
+  "editor.formatOnSave": true,
+  "files.eol": "\n"
+}

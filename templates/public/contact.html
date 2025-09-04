@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Contact — Envy Games{% endblock %}
+{% block content %}
+<section class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 opacity-20">
+        <div
+            class="absolute -top-24 -left-24 h-72 w-72 rounded-full blur-3xl bg-gradient-to-tr from-primary to-secondary">
+        </div>
+        <div
+            class="absolute -bottom-24 -right-24 h-72 w-72 rounded-full blur-3xl bg-gradient-to-tr from-secondary to-accent">
+        </div>
+    </div>
+
+    <div class="relative mx-auto max-w-3xl px-6 py-12">
+        <h1 class="text-3xl md:text-4xl font-extrabold mb-6">Contact</h1>
+
+        <div class="rounded-2xl bg-base-100/60 backdrop-blur-sm shadow-lg ring-1 ring-base-300">
+            <div class="px-8 py-10 space-y-6">
+                <p class="opacity-90">
+                    The best way to reach us is by creating a <span class="font-semibold">support ticket</span> in our
+                    Discord.
+                </p>
+
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div class="card bg-base-200/60">
+                        <div class="card-body p-6">
+                            <h2 class="card-title text-base">Discord</h2>
+                            <p class="text-sm opacity-80">Open a ticket for faster responses.</p>
+                            <a class="btn btn-primary mt-3" href="https://discord.gg/aavGTYAGTy" target="_blank"
+                                rel="noopener">
+                                Join Discord
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="card bg-base-200/60">
+                        <div class="card-body p-6">
+                            <h2 class="card-title text-base">Email</h2>
+                            <p class="text-sm opacity-80">
+                                <a class="link" href="mailto:envy@envy-games.com">envy@envy-games.com</a>
+                            </p>
+                            <p class="text-xs opacity-70 mt-2">
+                                We may not respond via email in a timely fashion and are under no obligation to respond.
+                            </p>
+                            <a class="btn btn-ghost mt-3" href="mailto:envy@envy-games.com">Open Mail</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-sm opacity-80 pt-2">
+                    <a class="link mr-4" href="/about/">About</a>
+                    <a class="link" href="/privacy/">Privacy</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
