@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User
+from accounts.models import UserRole
 from .models import Project, Task
 
 
@@ -83,26 +84,29 @@ class QuickTaskForm(forms.ModelForm):
         }
 
 class AddMemberForm(forms.Form):
-    """Form to add a member to a project by username"""
-    username = forms.CharField(
-        max_length=150,
-        widget=forms.TextInput(attrs={
-            'class': 'input input-bordered w-full',
-            'placeholder': 'Enter username...'
+    user_id = forms.ModelChoiceField(
+        label="Select user",
+        queryset=User.objects.none(),
+        required=True,
+        widget=forms.Select(attrs={
+            "class": "select select-bordered w-full max-w-xs"
         })
     )
-    
+
     def __init__(self, *args, project=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.project = project
-    
-    def clean_username(self):
-        username = self.cleaned_data['username']
-        try:
-            user = User.objects.get(username=username)
-            # Check if already a member
-            if self.project and self.project.memberships.filter(user=user, is_active=True).exists():
-                raise forms.ValidationError(f"{username} is already a member of this project")
-            return username
-        except User.DoesNotExist:
-            raise forms.ValidationError(f"User '{username}' not found")
+        eligible_roles = [r for r in (
+            getattr(UserRole, "PROJECT_MANAGER", None),
+            getattr(UserRole, "DEVELOPER", None)
+        ) if r]
+
+        qs = User.objects.select_related("profile")
+        if eligible_roles:
+            qs = qs.filter(profile__role__in=eligible_roles)
+
+        if project is not None:
+            qs = qs.exclude(
+                id__in=project.memberships.filter(is_active=True).values("user_id")
+            )
+
+        self.fields["user_id"].queryset = qs.order_by("username")

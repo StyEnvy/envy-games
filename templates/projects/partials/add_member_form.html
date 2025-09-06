@@ -1,15 +1,22 @@
-<form hx-post="{% url 'projects:add_member' project.slug %}" hx-target="#members-list" hx-swap="outerHTML"
-    class="flex gap-2">
-    {% csrf_token %}
+{# Root has no id; the wrapper supplies id + hx-swap-oob when needed #}
+{% with qs=add_member_form.fields.user_id.queryset %}
+<div class="flex items-center gap-2">
+    {% if qs.exists %}
+    <form hx-post="{% url 'projects:add_member' project.slug %}" hx-target="#members-list" hx-swap="outerHTML"
+        class="flex items-center gap-2">
+        {% csrf_token %}
+        {{ add_member_form.user_id }}
+        <button type="submit" class="btn btn-primary">Add Member</button>
+    </form>
+    {% else %}
+    <div class="text-sm opacity-60">No eligible users available</div>
+    {% endif %}
+</div>
 
-    <div class="form-control flex-1">
-        {{ add_member_form.username }}
-        {% if add_member_form.username.errors %}
-        <label class="label">
-            <span class="label-text-alt text-error">{{ add_member_form.username.errors.0 }}</span>
-        </label>
-        {% endif %}
-    </div>
-
-    <button type="submit" class="btn btn-primary">Add Member</button>
-</form>
+{% if add_member_form.non_field_errors %}
+<div class="text-error text-sm mt-2">{{ add_member_form.non_field_errors.0 }}</div>
+{% endif %}
+{% if add_member_form.user_id.errors %}
+<div class="text-error text-sm mt-2">{{ add_member_form.user_id.errors.0 }}</div>
+{% endif %}
+{% endwith %}

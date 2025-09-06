@@ -170,10 +170,10 @@
                 {% endif %}
               </div>
               <div class="flex gap-2 mt-2">
-                <a href="{% url 'projects:board' project.slug %}" class="btn btn-xs btn-primary">Board</a>
+                <a href="{% url 'projects:board' project.slug %}" class="btn btn-xs btn-primary">Tasks</a>
                 <a href="{% url 'projects:roadmap' project.slug %}" class="btn btn-xs btn-outline">Roadmap</a>
                 {% if is_manager %}
-                <a href="{% url 'projects:edit' project.slug %}" class="btn btn-xs btn-ghost">Edit</a>
+                <a href="{% url 'projects:edit' project.slug %}" class="btn btn-xs btn-ghost">Edit Project</a>
                 {% endif %}
               </div>
             </div>

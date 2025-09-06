@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST, require_http_methods
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.urls import reverse_lazy
@@ -470,47 +471,46 @@ def upload_attachment(request, task_id):
 
 @login_required
 @role_required(UserRole.PROJECT_MANAGER)
-@require_POST
+@require_http_methods(["GET", "POST"])
 def add_member(request, slug):
-    """Add a member to the project (PM only)"""
     project = get_object_or_404(Project, slug=slug)
 
-    form = AddMemberForm(request.POST, project=project)
-    if form.is_valid():
-        try:
-            username = form.cleaned_data["username"]
-            user = User.objects.get(username=username)
-
-            # Check if already a member
-            if project.memberships.filter(user=user, is_active=True).exists():
-                form.add_error("username", "User is already a member")
-            else:
-                project.add_member(user, added_by=request.user)
-
-                # Return updated members list
-                members = project.memberships.filter(is_active=True).order_by("joined_at")
-                return render(
-                    request,
-                    "projects/partials/members_list.html",
-                    {
-                        "members": members,
-                        "project": project,
-                        "is_manager": True,
-                    },
-                )
-
-        except User.DoesNotExist:
-            form.add_error("username", "User not found")
-
-    # Return form with errors
-    return render(
-        request,
-        "projects/partials/add_member_form.html",
-        {
-            "add_member_form": form,
+    if request.method == "GET":
+        add_member_form = AddMemberForm(project=project)
+        return render(request, "projects/partials/add_member_form.html", {
             "project": project,
-        },
-    )
+            "add_member_form": add_member_form,
+        })
+
+    # POST
+    add_member_form = AddMemberForm(request.POST, project=project)
+    if add_member_form.is_valid():
+        user = add_member_form.cleaned_data["user_id"]
+
+        # already a member?
+        if project.memberships.filter(user=user, is_active=True).exists():
+            add_member_form.add_error("user_id", "User is already a member.")
+        else:
+            project.add_member(user, added_by=request.user)
+
+    # Always return both: the members list (normal swap) and a refreshed form (OOB)
+    members = project.memberships.filter(is_active=True).order_by("joined_at")
+    html = render_to_string("projects/partials/members_list.html", {
+        "members": members,
+        "project": project,
+        "is_manager": True,
+    }, request=request)
+
+    form_html = render_to_string("projects/partials/add_member_form.html", {
+        "project": project,
+        # fresh form after success; keep errors if invalid
+        "add_member_form": AddMemberForm(project=project) if not add_member_form.errors else add_member_form,
+        "oob": True,
+    }, request=request)
+
+    # Append OOB wrapper so only the form area is replaced alongside the list
+    html += f'<div id="add-member-form" hx-swap-oob="true">{form_html}</div>'
+    return HttpResponse(html)
 
 
 @login_required
