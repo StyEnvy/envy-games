@@ -1,147 +1,98 @@
 {% extends "base.html" %}
-{% block title %}{{ project.name }} — Envy Games{% endblock %}
+{% block title %}{{ project.title }} - Envy Games{% endblock %}
+
 {% block content %}
-<div class="container mx-auto p-4 pt-20 max-w-6xl">
-
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-3 mb-6">
-        <div>
-            <h1 class="text-2xl md:text-3xl font-bold">{{ project.name }}</h1>
-            <p class="opacity-70">
-                {{ project.get_type_display }} • {{ project.get_status_display }} • Owner: {{ project.owner }}
-            </p>
-        </div>
-        <div class="flex gap-2">
-            <a href="{% url 'projects:edit' project.slug %}" class="btn btn-outline">Edit Project</a>
-            <a href="{% url 'tasks:project_task_list' project.slug %}" class="btn btn-primary">Manage Tasks</a>
-            <a href="{% url 'projects:list_mine' %}" class="btn btn-ghost">Back</a>
-        </div>
+<div class="mb-6">
+    <!-- Breadcrumbs -->
+    <div class="breadcrumbs text-sm mb-4">
+        <ul>
+            <li><a href="{% url 'projects:list' %}">Projects</a></li>
+            <li>{{ project.title }}</li>
+        </ul>
     </div>
 
-    <!-- Description -->
-    {% if project.description %}
-    <div class="card bg-base-100 shadow mb-6">
-        <div class="card-body prose max-w-none">
-            {{ project.description|linebreaks }}
-        </div>
-    </div>
-    {% else %}
-    <div class="alert mb-6"><span>No description provided.</span></div>
-    {% endif %}
-
-    <!-- Quick status chips -->
-    <div class="flex flex-wrap gap-2 mb-4">
-        <a class="badge {% if status_all %}badge-primary{% else %}badge-outline{% endif %}" href="?q={{ q|urlencode }}">
-            All ({{ all_count }})
-        </a>
-        <a class="badge {% if status_todo %}badge-primary{% else %}badge-outline{% endif %}"
-            href="?status=todo&q={{ q|urlencode }}">
-            To Do ({{ status_counts.todo|default_if_none:0 }})
-        </a>
-        <a class="badge {% if status_doing %}badge-primary{% else %}badge-outline{% endif %}"
-            href="?status=doing&q={{ q|urlencode }}">
-            Doing ({{ status_counts.doing|default_if_none:0 }})
-        </a>
-        <a class="badge {% if status_review %}badge-primary{% else %}badge-outline{% endif %}"
-            href="?status=review&q={{ q|urlencode }}">
-            Review ({{ status_counts.review|default_if_none:0 }})
-        </a>
-        <a class="badge {% if status_done %}badge-primary{% else %}badge-outline{% endif %}"
-            href="?status=done&q={{ q|urlencode }}">
-            Done ({{ status_counts.done|default_if_none:0 }})
-        </a>
-    </div>
-
-    <!-- Filters -->
-    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-        <input name="q" value="{{ q|default_if_none:'' }}" placeholder="Search tasks…"
-            class="input input-bordered w-full md:col-span-2" />
-
-        <select name="status" class="select select-bordered w-full">
-            <option value="">Any status</option>
-            {% for opt in status_options %}
-            {% if opt.selected %}
-            <option value="{{ opt.value }}" selected>{{ opt.label }}</option>
-            {% else %}
-            <option value="{{ opt.value }}">{{ opt.label }}</option>
-            {% endif %}
-            {% endfor %}
-        </select>
-
-        <select name="priority" class="select select-bordered w-full">
-            <option value="">Any priority</option>
-            {% for opt in priority_options %}
-            {% if opt.selected %}
-            <option value="{{ opt.value }}" selected>{{ opt.label }}</option>
-            {% else %}
-            <option value="{{ opt.value }}">{{ opt.label }}</option>
-            {% endif %}
-            {% endfor %}
-        </select>
-
-        <div class="md:col-span-1 flex gap-2">
-            <button class="btn btn-primary w-full">Apply</button>
-            <a href="." class="btn w-full">Reset</a>
-        </div>
-    </form>
-
-    <!-- Task list preview -->
-    <div class="flex items-center justify-between mb-2">
-        <h2 class="text-xl font-semibold">Tasks</h2>
-        <div class="flex gap-2">
-            <a class="btn btn-outline btn-sm" href="{% url 'tasks:project_task_list' project.slug %}">Open full list</a>
-            <a class="btn btn-primary btn-sm" href="{% url 'tasks:task_create' project.slug %}">New Task</a>
-        </div>
-    </div>
-
-    {% if tasks %}
-    <div class="grid gap-3">
-        {% for t in tasks %}
-        <a href="{% url 'tasks:task_detail' t.pk %}" class="card bg-base-100 hover:shadow-md transition">
-            <div class="card-body p-4">
-                <div class="flex items-center justify-between">
-                    <div class="font-medium">{{ t.title }}</div>
-                    <div class="text-sm opacity-70">
-                        {% if t.get_status_display %}{{ t.get_status_display }}{% else %}{{ t.status }}{% endif %}
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-3xl font-bold mb-2">{{ project.title }}</h1>
+                    <div class="flex gap-2 mb-4">
+                        <div class="badge badge-outline 
+                            {% if project.status == 'active' %}badge-success{% endif %}
+                            {% if project.status == 'planning' %}badge-info{% endif %}
+                            {% if project.status == 'hold' %}badge-warning{% endif %}
+                            {% if project.status == 'completed' %}badge-primary{% endif %}
+                            {% if project.status == 'archived' %}badge-ghost{% endif %}">
+                            {{ project.get_status_display }}
+                        </div>
+                        <div class="badge badge-ghost">v{{ project.version }}</div>
                     </div>
                 </div>
-                <div class="text-sm opacity-70">
-                    {% if t.priority %}P{{ t.priority }} • {% endif %}
-                    {% if t.assignee %}{{ t.assignee.username }}{% else %}Unassigned{% endif %}
-                    {% if t.parent %} • Child of: {{ t.parent.title }}{% endif %}
-                </div>
-                {% with labels=t.labels.all %}
-                {% if labels %}
-                <div class="mt-1">
-                    {% for label in labels %}
-                    <span class="badge mr-1">{{ label.name }}</span>
-                    {% endfor %}
+                {% if is_manager %}
+                <div class="dropdown dropdown-end">
+                    <label tabindex="0" class="btn btn-ghost btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                        </svg>
+                    </label>
+                    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li><a href="{% url 'projects:edit' project.slug %}">Edit Project</a></li>
+                    </ul>
                 </div>
                 {% endif %}
-                {% endwith %}
             </div>
-        </a>
-        {% endfor %}
-    </div>
 
-    {% if page_obj.has_other_pages %}
-    <div class="join mt-6">
-        {% if page_obj.has_previous %}
-        <a class="btn join-item"
-            href="?page={{ page_obj.previous_page_number }}&q={{ q|urlencode }}&status={{ status_filter }}&priority={{ priority_filter }}">«
-            Prev</a>
-        {% endif %}
-        <button class="btn join-item">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</button>
-        {% if page_obj.has_next %}
-        <a class="btn join-item"
-            href="?page={{ page_obj.next_page_number }}&q={{ q|urlencode }}&status={{ status_filter }}&priority={{ priority_filter }}">Next
-            »</a>
-        {% endif %}
-    </div>
-    {% endif %}
-    {% else %}
-    <div class="alert">No tasks match your filters.</div>
-    {% endif %}
+            <p class="mb-6 opacity-80">{{ project.description|default:"No description provided" }}</p>
 
+            <!-- Stats -->
+            <div class="stats shadow mb-6">
+                <div class="stat">
+                    <div class="stat-title">Total Tasks</div>
+                    <div class="stat-value text-primary">{{ task_stats.total }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">My Tasks</div>
+                    <div class="stat-value text-secondary">{{ task_stats.assigned_to_me }}</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-title">Unassigned</div>
+                    <div class="stat-value">{{ task_stats.unassigned }}</div>
+                </div>
+            </div>
+
+            <!-- Boards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {% if tasks_board %}
+                <a href="{% url 'projects:board' project.slug %}" class="btn btn-lg btn-outline btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                    </svg>
+                    Tasks Board
+                </a>
+                {% endif %}
+
+                {% if roadmap_board %}
+                <a href="{% url 'projects:roadmap' project.slug %}" class="btn btn-lg btn-outline btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    Roadmap
+                </a>
+                {% endif %}
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="text-sm opacity-60">
+                Created by {{ project.created_by.username }} on {{ project.created_at|date:"M d, Y" }}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

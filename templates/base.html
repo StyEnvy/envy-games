@@ -1,10 +1,12 @@
 ﻿<!doctype html>
-<html data-theme="dark">
+<html lang="en" data-theme="dark">
 
 <head>
   <meta charset="utf-8">
   <title>{% block title %}Envy Games{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { plugins: [] }</script>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" />
@@ -12,6 +14,17 @@
 
   {% load static %}
   <link rel="icon" type="image/x-icon" href="{% static 'favicon.ico' %}">
+
+  <!-- Global HTMX CSRF header (safe in <head>) -->
+  <script>
+      (function () {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        var token = meta ? meta.getAttribute('content') : '';
+        document.addEventListener('htmx:configRequest', function (e) {
+          if (token) e.detail.headers['X-CSRFToken'] = token;
+        });
+      })();
+  </script>
 
   {% block head %}{% endblock %}
 </head>
@@ -63,21 +76,19 @@
           {% if user.is_authenticated %}
           <li class="h-16">
             <a href="{% url 'dashboard:home' %}"
-              class="h-full px-3 rounded-btn flex items-center
-                        hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
+              class="h-full px-3 rounded-btn flex items-center hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
               Dashboard
             </a>
           </li>
           <li class="h-16">
             <a href="/admin/"
-              class="h-full px-3 rounded-btn flex items-center
-                        hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
+              class="h-full px-3 rounded-btn flex items-center hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
               Admin
             </a>
           </li>
           <li class="h-16">
-            <a href="#" class="h-full px-3 rounded-btn flex items-center text-error hover:bg-error/10
-                        focus-visible:outline-none focus-visible:ring focus-visible:ring-error/40"
+            <a href="#"
+              class="h-full px-3 rounded-btn flex items-center text-error hover:bg-error/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-error/40"
               onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
               Logout
             </a>
@@ -88,8 +99,7 @@
           {% else %}
           <li class="h-16">
             <a href="{% url 'login' %}"
-              class="h-full px-3 rounded-btn flex items-center
-                        hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
+              class="h-full px-3 rounded-btn flex items-center hover:bg-primary/10 focus-visible:outline-none focus-visible:ring focus-visible:ring-primary/40">
               Login
             </a>
           </li>

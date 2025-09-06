@@ -1,0 +1,275 @@
+﻿{% extends "base.html" %}
+{% block title %}Dashboard — Envy Games{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-4 pt-20 max-w-7xl">
+
+  <!-- Header with user info -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-bold">Dashboard</h1>
+      <p class="text-sm opacity-70 mt-1">
+        Welcome back, {{ user.get_full_name|default:user.username }}
+        <span class="badge badge-sm">{{ user.profile.get_role_display }}</span>
+      </p>
+    </div>
+    {% if is_manager %}
+    <a class="btn btn-primary" href="{% url 'projects:create' %}">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
+        stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      New Project
+    </a>
+    {% endif %}
+  </div>
+
+  <!-- Task Statistics Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title text-xs">Assigned Tasks</div>
+      <div class="stat-value text-2xl">{{ task_stats.total_assigned }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title text-xs">High Priority</div>
+      <div class="stat-value text-2xl text-error">{{ task_stats.high_priority }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title text-xs">In Progress</div>
+      <div class="stat-value text-2xl text-warning">{{ task_stats.in_progress }}</div>
+    </div>
+    <div class="stat bg-base-100 rounded-lg shadow">
+      <div class="stat-title text-xs">Pending Review</div>
+      <div class="stat-value text-2xl text-info">{{ task_stats.pending_review }}</div>
+    </div>
+  </div>
+
+  <!-- Main Grid Layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left Column - My Tasks -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- To Do Tasks -->
+      {% if todo_tasks %}
+      <div class="card bg-base-100 shadow">
+        <div class="card-body">
+          <h2 class="card-title text-lg flex items-center">
+            <span class="badge badge-primary badge-sm mr-2">TO DO</span>
+            My Upcoming Tasks
+          </h2>
+          <div class="space-y-2">
+            {% for task in todo_tasks %}
+            <div
+              class="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
+              <div class="flex-1">
+                <a href="{% url 'projects:board' task.project.slug %}" class="font-medium hover:link">
+                  {{ task.title }}
+                </a>
+                <div class="text-xs opacity-70 mt-1">
+                  {{ task.project.title }}
+                  {% if task.priority == 'high' %}
+                  <span class="badge badge-error badge-xs ml-2">HIGH</span>
+                  {% elif task.priority == 'medium' %}
+                  <span class="badge badge-warning badge-xs ml-2">MED</span>
+                  {% endif %}
+                  <span class="badge badge-outline badge-xs ml-2">{{ task.get_task_type_display }}</span>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- In Progress Tasks -->
+      {% if in_progress_tasks %}
+      <div class="card bg-base-100 shadow">
+        <div class="card-body">
+          <h2 class="card-title text-lg flex items-center">
+            <span class="badge badge-warning badge-sm mr-2">IN PROGRESS</span>
+            Currently Working On
+          </h2>
+          <div class="space-y-2">
+            {% for task in in_progress_tasks %}
+            <div
+              class="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
+              <div class="flex-1">
+                <a href="{% url 'projects:board' task.project.slug %}" class="font-medium hover:link">
+                  {{ task.title }}
+                </a>
+                <div class="text-xs opacity-70 mt-1">
+                  {{ task.project.title }}
+                  {% if task.priority == 'high' %}
+                  <span class="badge badge-error badge-xs ml-2">HIGH</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Manager: Unassigned Urgent Tasks -->
+      {% if is_manager and unassigned_urgent %}
+      <div class="card bg-error/10 border border-error/20">
+        <div class="card-body">
+          <h2 class="card-title text-lg text-error">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Unassigned High Priority Tasks
+          </h2>
+          <div class="space-y-2">
+            {% for task in unassigned_urgent %}
+            <div class="p-3 bg-base-100 rounded-lg">
+              <a href="{% url 'projects:board' task.project.slug %}" class="font-medium hover:link">
+                {{ task.title }}
+              </a>
+              <div class="text-xs opacity-70 mt-1">
+                {{ task.project.title }} • {{ task.column.name }}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Manager: Roadmap Items in Review -->
+      {% if is_manager and roadmap_review %}
+      <div class="card bg-info/10 border border-info/20">
+        <div class="card-body">
+          <h2 class="card-title text-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Roadmap Items Pending Review
+          </h2>
+          <div class="space-y-2">
+            {% for item in roadmap_review %}
+            <div class="p-3 bg-base-100 rounded-lg">
+              <a href="{% url 'projects:roadmap' item.project.slug %}" class="font-medium hover:link">
+                {{ item.title }}
+              </a>
+              <div class="text-xs opacity-70 mt-1">
+                {{ item.project.title }} • Submitted by {{ item.created_by.username }}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Right Column -->
+    <div class="space-y-6">
+
+      <!-- Active Projects -->
+      <div class="card bg-base-100 shadow">
+        <div class="card-body">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="card-title text-lg">Active Projects</h2>
+            <a class="link text-sm" href="{% url 'projects:list' %}">View all</a>
+          </div>
+          {% if active_projects %}
+          <div class="space-y-3">
+            {% for project in active_projects %}
+            <div class="border-l-4 border-primary pl-3">
+              <a href="{% url 'projects:detail' project.slug %}" class="font-medium hover:link">
+                {{ project.title }}
+              </a>
+              <div class="text-xs opacity-70 mt-1">
+                v{{ project.version }} • {{ project.get_status_display }}
+                {% if project.my_tasks > 0 %}
+                <span class="badge badge-xs ml-1">{{ project.my_tasks }} task{{ project.my_tasks|pluralize }}</span>
+                {% endif %}
+                {% if is_manager and project.unassigned_tasks > 0 %}
+                <span class="badge badge-warning badge-xs ml-1">{{ project.unassigned_tasks }} unassigned</span>
+                {% endif %}
+              </div>
+              <div class="flex gap-2 mt-2">
+                <a href="{% url 'projects:board' project.slug %}" class="btn btn-xs btn-primary">Board</a>
+                <a href="{% url 'projects:roadmap' project.slug %}" class="btn btn-xs btn-outline">Roadmap</a>
+                {% if is_manager %}
+                <a href="{% url 'projects:edit' project.slug %}" class="btn btn-xs btn-ghost">Edit</a>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-sm opacity-70">No active projects</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card bg-base-100 shadow">
+        <div class="card-body">
+          <h2 class="card-title text-lg mb-4">Recent Activity</h2>
+          {% if recent_activity %}
+          <div class="space-y-2 max-h-96 overflow-y-auto">
+            {% for activity in recent_activity %}
+            <div class="text-sm border-l-2 border-base-300 pl-3 py-1">
+              <div class="font-medium">
+                {{ activity.title }}
+              </div>
+              <div class="text-xs opacity-70">
+                {{ activity.project.title }}
+                {% if activity.created_at >= activity.updated_at %}
+                • Created by {{ activity.created_by.username }}
+                {% else %}
+                • Updated
+                {% endif %}
+                • {{ activity.updated_at|timesince }} ago
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-sm opacity-70">No recent activity</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="card bg-base-100 shadow">
+        <div class="card-body">
+          <h2 class="card-title text-lg mb-4">Quick Actions</h2>
+          <div class="space-y-2">
+            <a href="{% url 'projects:list' %}" class="btn btn-sm btn-block btn-outline">
+              Browse All Projects
+            </a>
+            {% if is_manager %}
+            <a href="{% url 'projects:create' %}" class="btn btn-sm btn-block btn-primary">
+              Create New Project
+            </a>
+            <a href="{% url 'admin:index' %}" class="btn btn-sm btn-block btn-outline">
+              Admin Panel
+            </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Auto-refresh dashboard every 60 seconds
+  setTimeout(() => {
+    window.location.reload();
+  }, 60000);
+</script>
+{% endblock %}

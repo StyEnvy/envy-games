@@ -1,40 +1,84 @@
 {% extends "base.html" %}
-{% block title %}New Project — Envy Games{% endblock %}
+{% block title %}{{ action }} Project - Envy Games{% endblock %}
+
 {% block content %}
-<h1 class="text-2xl md:text-3xl font-bold mb-6">New Project</h1>
-
-<form method="post" class="max-w-2xl space-y-4">
-    {% csrf_token %}
-    {{ form.non_field_errors }}
-
-    <div class="form-control">
-        <label class="label"><span class="label-text">Name</span></label>
-        {{ form.name }}
-        <label class="label"><span class="label-text-alt opacity-70">{{ form.fields.name.help_text }}</span></label>
-        {{ form.name.errors }}
+<div class="max-w-2xl mx-auto">
+    <div class="breadcrumbs text-sm mb-4">
+        <ul>
+            <li><a href="{% url 'projects:list' %}">Projects</a></li>
+            <li>{{ action }} Project</li>
+        </ul>
     </div>
 
-    <div class="form-control">
-        <label class="label"><span class="label-text">Type</span></label>
-        {{ form.type }}
-        {{ form.type.errors }}
-    </div>
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-6">{{ action }} Project</h2>
 
-    <div class="form-control">
-        <label class="label"><span class="label-text">Status</span></label>
-        {{ form.status }}
-        {{ form.status.errors }}
-    </div>
+            <form method="post">
+                {% csrf_token %}
 
-    <div class="form-control">
-        <label class="label"><span class="label-text">Description</span></label>
-        {{ form.description }}
-        {{ form.description.errors }}
-    </div>
+                {% if form.non_field_errors %}
+                <div class="alert alert-error mb-4">
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
 
-    <div class="flex gap-2">
-        <button class="btn btn-primary" type="submit">Create</button>
-        <a class="btn btn-ghost" href="{% url 'projects:list_mine' %}">Cancel</a>
+                <div class="form-control mb-4">
+                    <label class="label">
+                        <span class="label-text">Title</span>
+                    </label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.title.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Version</span>
+                        </label>
+                        {{ form.version }}
+                        {% if form.version.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.version.errors.0 }}</span>
+                        </label>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Status</span>
+                        </label>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.status.errors.0 }}</span>
+                        </label>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-control mb-6">
+                    <label class="label">
+                        <span class="label-text">Description</span>
+                    </label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.description.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                </div>
+
+                <div class="card-actions justify-end">
+                    <a href="{% url 'projects:list' %}" class="btn btn-ghost">Cancel</a>
+                    <button type="submit" class="btn btn-primary">{{ action }} Project</button>
+                </div>
+            </form>
+        </div>
     </div>
-</form>
+</div>
 {% endblock %}

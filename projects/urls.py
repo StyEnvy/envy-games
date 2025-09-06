@@ -4,10 +4,24 @@ from . import views
 app_name = "projects"
 
 urlpatterns = [
-    path("", views.ProjectHomeView.as_view(), name="home"),
-    path("mine/", views.ProjectListView.as_view(scope="mine"), name="list_mine"),
-    path("all/", views.ProjectListView.as_view(scope="all"), name="list_all"),
+    # Home / lists
+    path("", views.ProjectListView.as_view(), name="list"),
+    path("mine/", views.ProjectListMineView.as_view(), name="list_mine"),
+    path("all/", views.ProjectListAllView.as_view(), name="list_all"),
+
+    # Project views
     path("new/", views.ProjectCreateView.as_view(), name="create"),
     path("<slug:slug>/", views.ProjectDetailView.as_view(), name="detail"),
-    path("<slug:slug>/edit/", views.ProjectUpdateView.as_view(), name="edit"),  # ← NEW
+    path("<slug:slug>/edit/", views.ProjectUpdateView.as_view(), name="edit"),
+
+    # Board views
+    path("<slug:slug>/board/", views.board_view, name="board"),
+    path("<slug:slug>/roadmap/", views.roadmap_view, name="roadmap"),
+
+    # HTMX endpoints
+    path("htmx/task/<int:task_id>/move/", views.move_task, name="move_task"),
+    path("htmx/column/<int:column_id>/add-task/", views.quick_add_task, name="quick_add_task"),
+    path("htmx/task/<int:task_id>/modal/", views.task_modal, name="task_modal"),
+    path("htmx/task/<int:task_id>/convert/", views.convert_to_task, name="convert_to_task"),
+    path("htmx/task/<int:task_id>/upload/", views.upload_attachment, name="upload_attachment"),
 ]

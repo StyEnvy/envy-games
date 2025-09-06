@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ project.title }} - Tasks Board{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.1/Sortable.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="breadcrumbs text-sm mb-4">
+        <ul>
+            <li><a href="{% url 'projects:list' %}">Projects</a></li>
+            <li><a href="{% url 'projects:detail' project.slug %}">{{ project.title }}</a></li>
+            <li>Tasks Board</li>
+        </ul>
+    </div>
+
+    <h1 class="text-2xl font-bold mb-6">{{ project.title }} - Tasks Board</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="tasks-board">
+        {% for column in columns %}
+        <div class="bg-base-200 rounded-lg p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-semibold">{{ column.name }}</h3>
+                <span class="badge badge-neutral">{{ column.tasks.all|length }}</span>
+            </div>
+
+            {% if is_manager %}
+            <div class="mb-4">
+                <form hx-post="{% url 'projects:quick_add_task' column.id %}" hx-target="#column-{{ column.id }}"
+                    hx-swap="beforeend" hx-disabled-elt="button[type=submit]" class="flex gap-2 items-center">
+                    {% csrf_token %}
+                    <input type="text" name="title" placeholder="Add task..."
+                        class="input input-sm input-bordered flex-1" required>
+                    <input type="hidden" name="task_type" value="task">
+                    <input type="hidden" name="priority" value="medium">
+                    <button type="submit" class="btn btn-sm btn-primary">+</button>
+                    <span class="htmx-indicator loading loading-spinner loading-xs opacity-60"></span>
+                </form>
+            </div>
+            {% endif %}
+
+            <div id="column-{{ column.id }}" class="space-y-2 min-h-[200px]" data-column-id="{{ column.id }}">
+                {% for task in column.tasks.all %}
+                {% include "projects/partials/task_card.html" %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div id="task-modal-container"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Use meta tag to read CSRF safely (works with HttpOnly cookies)
+    const csrftoken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        {% for column in columns %}
+        new Sortable(document.getElementById('column-{{ column.id }}'), {
+            group: 'shared',
+            animation: 150,
+            ghostClass: 'opacity-50',
+            onEnd: function (evt) {
+                const taskId = evt.item.dataset.taskId;
+                const newColumnId = evt.to.dataset.columnId;
+                const position = evt.newIndex;
+
+                fetch(`/app/projects/htmx/task/${taskId}/move/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `column_id=${encodeURIComponent(newColumnId)}&position=${encodeURIComponent(position)}`
+                });
+            }
+        });
+        {% endfor %}
+    });
+</script>
+{% endblock %}

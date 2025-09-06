@@ -15,9 +15,9 @@ DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = [h.strip() for h in env("DJANGO_ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")]
 
 # --- Auth redirects ---
-LOGIN_URL = "/login/"
+LOGIN_URL = "accounts:login"
 LOGIN_REDIRECT_URL = "/app/dashboard/"
-LOGOUT_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "public:home"
 
 # --- Apps ---
 INSTALLED_APPS = [
@@ -30,10 +30,7 @@ INSTALLED_APPS = [
     # Product apps
     "accounts",
     "projects",
-    "tasks",
-    "assets",
     "dashboard",
-    "api",
     "public",
 ]
 

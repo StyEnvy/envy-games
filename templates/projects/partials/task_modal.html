@@ -1,0 +1,84 @@
+<dialog class="modal modal-open">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Task Details</h3>
+
+        <form method="post" hx-post="{% url 'projects:task_modal' task.id %}" hx-target="[data-task-id='{{ task.id }}']"
+            hx-swap="outerHTML">
+            {% csrf_token %}
+
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Title</span>
+                </label>
+                {{ form.title }}
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Description</span>
+                </label>
+                {{ form.description }}
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Type</span>
+                    </label>
+                    {{ form.task_type }}
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Priority</span>
+                    </label>
+                    {{ form.priority }}
+                </div>
+            </div>
+
+            <div class="form-control mb-4">
+                <label class="label">
+                    <span class="label-text">Assignee</span>
+                </label>
+                {{ form.assignee }}
+            </div>
+
+            <!-- Attachments -->
+            {% if task.attachments.count > 0 %}
+            <div class="mb-4">
+                <label class="label">
+                    <span class="label-text">Attachments</span>
+                </label>
+                <ul class="menu bg-base-200 rounded-box">
+                    {% for attachment in task.attachments.all %}
+                    <li><a href="{{ attachment.file.url }}" target="_blank">{{ attachment.filename }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <div class="modal-action">
+                <button type="button" class="btn" onclick="this.closest('dialog').remove()">Cancel</button>
+                {% if is_manager or task.assignee == request.user %}
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+                {% endif %}
+            </div>
+        </form>
+
+        <!-- File Upload (if can edit) -->
+        {% if is_manager or task.assignee == request.user %}
+        <div class="divider">Attach File</div>
+        <form hx-post="{% url 'projects:upload_attachment' task.id %}" hx-encoding="multipart/form-data"
+            hx-target="[data-task-id='{{ task.id }}']" hx-swap="outerHTML">
+            {% csrf_token %}
+            <div class="form-control">
+                <input type="file" name="file" class="file-input file-input-bordered w-full" />
+                <button type="submit" class="btn btn-sm btn-secondary mt-2">Upload</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+    </form>
+</dialog>
