@@ -1,3 +1,4 @@
+{# templates/projects/roadmap.html #}
 {% extends "base.html" %}
 {% block title %}{{ project.title }} - Roadmap{% endblock %}
 
@@ -15,7 +16,13 @@
         </ul>
     </div>
 
-    <h1 class="text-2xl font-bold mb-6">{{ project.title }} - Roadmap</h1>
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-bold">{{ project.title }} - Roadmap</h1>
+        <div class="flex gap-2">
+            <a href="{% url 'projects:detail' project.slug %}" class="btn btn-ghost">Back</a>
+            <a href="{% url 'projects:board' project.slug %}" class="btn btn-outline">Go to Task Board</a>
+        </div>
+    </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="roadmap-board">
         {% for column in columns %}
@@ -25,12 +32,14 @@
                 <span class="badge badge-neutral">{{ column.tasks.all|length }}</span>
             </div>
 
+            {# Quick Add only in the first column (Ideas). Fallback check by name too. #}
             {% if is_manager %}
+            {% if column.position == 0 or column.name|lower == 'ideas' %}
             <div class="mb-4">
                 <form hx-post="{% url 'projects:quick_add_task' column.id %}" hx-target="#column-{{ column.id }}"
                     hx-swap="beforeend" hx-disabled-elt="button[type=submit]" class="flex gap-2 items-center">
                     {% csrf_token %}
-                    <input type="text" name="title" placeholder="Add idea..."
+                    <input type="text" name="title" placeholder="Add Idea Title..."
                         class="input input-sm input-bordered flex-1" required>
                     <input type="hidden" name="task_type" value="idea">
                     <input type="hidden" name="priority" value="low">
@@ -39,10 +48,15 @@
                 </form>
             </div>
             {% endif %}
+            {% endif %}
 
             <div id="column-{{ column.id }}" class="space-y-2 min-h-[200px]" data-column-id="{{ column.id }}">
                 {% for task in column.tasks.all %}
                 {% include "projects/partials/roadmap_card.html" %}
+                {% empty %}
+                <div class="text-sm opacity-60 italic p-3 rounded bg-base-300/40">
+                    No items here yet.
+                </div>
                 {% endfor %}
             </div>
         </div>
@@ -55,8 +69,48 @@
 
 {% block scripts %}
 <script>
-    // Use meta tag to read CSRF safely (works with HttpOnly cookies)
     const csrftoken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    let reloadScheduled = false;
+    window.__dragging = false;
+
+    function toast(msg, level = 'error') {
+        try {
+            const wrap = document.createElement('div');
+            wrap.className = 'toast toast-end';
+            wrap.innerHTML = `<div class="alert alert-${level}"><span>${msg}</span></div>`;
+            document.body.appendChild(wrap);
+            setTimeout(() => wrap.remove(), 2000);
+        } catch { /* no-op */ }
+    }
+
+    document.addEventListener('click', function (e) {
+        if (window.__dragging && e.target.closest('[data-task-id]')) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    }, true);
+
+    function updateBadgeCount(columnContainer, newCount) {
+        if (!columnContainer) return;
+        const card = columnContainer.closest('.bg-base-200');
+        const badge = card ? card.querySelector('.badge-neutral') : null;
+        if (badge) {
+            badge.textContent = (typeof newCount === 'number')
+                ? newCount
+                : columnContainer.querySelectorAll('[data-task-id]').length;
+        }
+    }
+
+    function revertMove(evt) {
+        const fromId = evt.item.dataset.fromColumnId;
+        const oldIndex = parseInt(evt.item.dataset.prevIndex || '0', 10);
+        const fromEl = document.querySelector(`[data-column-id="${fromId}"]`);
+        if (fromEl) {
+            fromEl.insertBefore(evt.item, fromEl.children[oldIndex] || null);
+            updateBadgeCount(fromEl);
+            updateBadgeCount(evt.to);
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', function () {
         {% if is_manager %}
@@ -65,6 +119,13 @@
             group: 'roadmap',
             animation: 150,
             ghostClass: 'opacity-50',
+            delayOnTouchOnly: true,
+            delay: 120,
+            onStart: function (evt) {
+                window.__dragging = true;
+                evt.item.dataset.prevIndex = evt.oldIndex;
+                evt.item.dataset.fromColumnId = evt.from.dataset.columnId;
+            },
             onEnd: function (evt) {
                 const taskId = evt.item.dataset.taskId;
                 const newColumnId = evt.to.dataset.columnId;
@@ -75,9 +136,25 @@
                     headers: {
                         'X-CSRFToken': csrftoken,
                         'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
                     },
                     body: `column_id=${encodeURIComponent(newColumnId)}&position=${encodeURIComponent(position)}`
-                });
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.ok) throw new Error(data.error || 'Move failed');
+                        if (!reloadScheduled) {
+                            reloadScheduled = true;
+                            setTimeout(() => window.location.reload(), 60);
+                        }
+                    })
+                    .catch((err) => {
+                        revertMove(evt);
+                        toast(err.message || 'Could not move item', 'error');
+                    })
+                    .finally(() => {
+                        window.__dragging = false;
+                    });
             }
         });
         {% endfor %}

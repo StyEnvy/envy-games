@@ -16,9 +16,11 @@
         {% endif %}
     </div>
 
-    <!-- Search and Filter -->
+    <!-- Search -->
     <div class="flex flex-wrap gap-4 mb-6">
         <form method="get" class="flex gap-2 flex-1">
+            <input type="hidden" name="status" value="{{ current_status }}">
+            <input type="hidden" name="type" value="{{ current_type }}">
             <input type="text" name="q" value="{{ current_q }}" placeholder="Search projects..."
                 class="input input-bordered flex-1 max-w-md">
             <button type="submit" class="btn btn-ghost">
@@ -32,12 +34,22 @@
     </div>
 
     <!-- Status Filter Tabs -->
-    <div class="tabs tabs-boxed mb-6">
-        <a href="?status=all{% if current_q %}&q={{ current_q }}{% endif %}"
+    <div class="tabs tabs-boxed mb-4">
+        <a href="?status=all{% if current_type != 'all' %}&type={{ current_type }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
             class="tab {% if current_status == 'all' %}tab-active{% endif %}">All</a>
         {% for value, label in status_choices %}
-        <a href="?status={{ value }}{% if current_q %}&q={{ current_q }}{% endif %}"
+        <a href="?status={{ value }}{% if current_type != 'all' %}&type={{ current_type }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
             class="tab {% if current_status == value %}tab-active{% endif %}">{{ label }}</a>
+        {% endfor %}
+    </div>
+
+    <!-- Type Filter Tabs -->
+    <div class="tabs tabs-boxed mb-6">
+        <a href="?type=all{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
+            class="tab {% if current_type == 'all' %}tab-active{% endif %}">All Types</a>
+        {% for value, label in type_choices %}
+        <a href="?type={{ value }}{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
+            class="tab {% if current_type == value %}tab-active{% endif %}">{{ label }}</a>
         {% endfor %}
     </div>
 
@@ -47,13 +59,16 @@
         <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
             <div class="card-body">
                 <div class="flex justify-between items-start mb-2">
-                    <div class="badge badge-outline 
-                        {% if project.status == 'active' %}badge-success{% endif %}
-                        {% if project.status == 'planning' %}badge-info{% endif %}
-                        {% if project.status == 'hold' %}badge-warning{% endif %}
-                        {% if project.status == 'completed' %}badge-primary{% endif %}
-                        {% if project.status == 'archived' %}badge-ghost{% endif %}">
-                        {{ project.get_status_display }}
+                    <div class="flex items-center gap-2">
+                        <div class="badge badge-outline 
+                            {% if project.status == 'active' %}badge-success{% endif %}
+                            {% if project.status == 'planning' %}badge-info{% endif %}
+                            {% if project.status == 'hold' %}badge-warning{% endif %}
+                            {% if project.status == 'completed' %}badge-primary{% endif %}
+                            {% if project.status == 'archived' %}badge-ghost{% endif %}">
+                            {{ project.get_status_display }}
+                        </div>
+                        <div class="badge badge-ghost">{{ project.get_project_type_display }}</div>
                     </div>
                     <span class="text-xs opacity-60">v{{ project.version }}</span>
                 </div>
@@ -82,14 +97,14 @@
     <div class="flex justify-center mt-8">
         <div class="join">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
+            <a href="?page={{ page_obj.previous_page_number }}{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_type != 'all' %}&type={{ current_type }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
                 class="join-item btn">«</a>
             {% endif %}
 
             <button class="join-item btn btn-active">Page {{ page_obj.number }}</button>
 
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
+            <a href="?page={{ page_obj.next_page_number }}{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_type != 'all' %}&type={{ current_type }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
                 class="join-item btn">»</a>
             {% endif %}
         </div>

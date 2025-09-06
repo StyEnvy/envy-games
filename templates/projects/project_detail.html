@@ -25,22 +25,21 @@
                             {% if project.status == 'archived' %}badge-ghost{% endif %}">
                             {{ project.get_status_display }}
                         </div>
+                        <div class="badge badge-ghost">{{ project.get_project_type_display }}</div>
                         <div class="badge badge-ghost">v{{ project.version }}</div>
                     </div>
                 </div>
+
                 {% if is_manager %}
-                <div class="dropdown dropdown-end">
-                    <label tabindex="0" class="btn btn-ghost btn-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                            stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                        </svg>
-                    </label>
-                    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52">
-                        <li><a href="{% url 'projects:edit' project.slug %}">Edit Project</a></li>
-                    </ul>
-                </div>
+                <a href="{% url 'projects:edit' project.slug %}" class="btn btn-primary btn-sm md:btn-md">
+                    <!-- pencil icon -->
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 mr-2" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.232 5.232l3.536 3.536M4 20h4l9.268-9.268a2 2 0 000-2.828l-1.172-1.172a2 2 0 00-2.828 0L4 16v4z" />
+                    </svg>
+                    Edit Project Details
+                </a>
                 {% endif %}
             </div>
 

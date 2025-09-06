@@ -5,10 +5,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils.text import slugify
 
-
 SLUG_MAX_TRIES = 50
 POSITION_STEP = 100
-
 
 def unique_slugify(instance, base_value, slug_field_name="slug"):
     """
@@ -25,7 +23,6 @@ def unique_slugify(instance, base_value, slug_field_name="slug"):
         n += 1
     return slug
 
-
 class Project(models.Model):
     STATUS_CHOICES = [
         ("planning", "Planning"),
@@ -35,10 +32,23 @@ class Project(models.Model):
         ("archived", "Archived"),
     ]
 
+    PROJECT_TYPE_CHOICES = [
+        ("game_unity", "Game - Unity"),
+        ("game_ue", "Game - UE"),
+        ("game_other", "Game - Other"),
+        ("plugin", "Plugin"),
+        ("mod", "Mod"),
+        ("mcmod", "Minecraft Mod"),
+        ("discord_bot", "Discord Bot"),
+        ("software", "Software"),
+        ("webapp", "Web/Webapp"),
+    ]
+
     title = models.CharField(max_length=200)
     slug = models.SlugField(unique=True, blank=True, db_index=True)
     version = models.CharField(max_length=20, default="0.1.0")
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="planning")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="planning", db_index=True)
+    project_type = models.CharField(max_length=20, choices=PROJECT_TYPE_CHOICES, default="software", db_index=True)
     description = models.TextField(blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -50,6 +60,10 @@ class Project(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["project_type"]),
+            models.Index(fields=["status", "project_type"]),
+        ]
 
     def __str__(self):
         return self.title
@@ -66,7 +80,6 @@ class Project(models.Model):
     def get_absolute_url(self):
         from django.urls import reverse
         return reverse("projects:detail", kwargs={"slug": self.slug})
-
 
 class Board(models.Model):
     BOARD_TYPE_CHOICES = [
@@ -90,7 +103,6 @@ class Board(models.Model):
     def __str__(self):
         return f"{self.project.title} - {self.name}"
 
-
 class Column(models.Model):
     board = models.ForeignKey(Board, on_delete=models.CASCADE, related_name="columns")
     name = models.CharField(max_length=100)
@@ -107,7 +119,6 @@ class Column(models.Model):
 
     def __str__(self):
         return f"{self.board.name} - {self.name}"
-
 
 class Task(models.Model):
     TASK_TYPE_CHOICES = [
@@ -194,7 +205,6 @@ class Task(models.Model):
         self.save()
         return True
 
-
 class Attachment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
     file = models.FileField(upload_to="task_attachments/%Y/%m/%d/")
@@ -212,11 +222,8 @@ class Attachment(models.Model):
         import os
         return os.path.basename(self.file.name)
 
-
 # --- default board/column setup via post_save to avoid side effects in save() ---
-
-# NOTE: keep constant names to avoid refactors elsewhere.
-DEFAULT_KANBAN_COLUMNS = [
+DEFAULT_TASK_COLUMNS = [
     ("To Do", 0),
     ("In Progress", 100),
     ("Review", 200),
@@ -224,11 +231,10 @@ DEFAULT_KANBAN_COLUMNS = [
 ]
 DEFAULT_ROADMAP_COLUMNS = [
     ("Ideas", 0),
-    ("Planned", 100),
+    ("Needs Review", 100),
     ("Approved", 200),
     ("Rejected", 300),
 ]
-
 
 @receiver(post_save, sender=Project)
 def create_default_boards(sender, instance, created, **kwargs):
@@ -243,7 +249,7 @@ def create_default_boards(sender, instance, created, **kwargs):
                 board_type="tasks",
                 is_active=True,
             )
-            for col_name, position in DEFAULT_KANBAN_COLUMNS:
+            for col_name, position in DEFAULT_TASK_COLUMNS:
                 Column.objects.create(board=tasks_board, name=col_name, position=position)
 
             roadmap_board = Board.objects.create(

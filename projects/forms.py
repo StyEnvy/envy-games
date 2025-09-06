@@ -6,7 +6,7 @@ from .models import Project, Task
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['title', 'version', 'status', 'description']
+        fields = ['title', 'version', 'status', 'project_type', 'description']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'input input-bordered w-full',
@@ -17,6 +17,9 @@ class ProjectForm(forms.ModelForm):
                 'placeholder': '0.1.0'
             }),
             'status': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'project_type': forms.Select(attrs={
                 'class': 'select select-bordered w-full'
             }),
             'description': forms.Textarea(attrs={

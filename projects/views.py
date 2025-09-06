@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
 from django.views.decorators.http import require_POST
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.urls import reverse_lazy
 from django.db import transaction
 from django.db.models import Q
@@ -39,7 +39,7 @@ def _task_card_template(task: Task) -> str:
 # --- Lists / detail --------------------------------------------------------
 
 class ProjectListView(LoginRequiredMixin, ListView):
-    """Shows all projects (filterable by status, searchable)"""
+    """Shows all projects (filterable by status, project_type; searchable)"""
     model = Project
     template_name = "projects/project_list.html"
     context_object_name = "projects"
@@ -48,10 +48,17 @@ class ProjectListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         qs = Project.objects.select_related("created_by")
 
+        # status filter (?status=planning|active|hold|completed|archived|all)
         status = self.request.GET.get("status")
         if status and status != "all":
             qs = qs.filter(status=status)
 
+        # project_type filter; accept either ?type=... or ?project_type=...
+        ptype = self.request.GET.get("type") or self.request.GET.get("project_type")
+        if ptype and ptype != "all":
+            qs = qs.filter(project_type=ptype)
+
+        # search
         q = self.request.GET.get("q")
         if q:
             qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
@@ -61,8 +68,10 @@ class ProjectListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["current_status"] = self.request.GET.get("status", "all")
+        ctx["current_type"] = (self.request.GET.get("type") or self.request.GET.get("project_type") or "all")
         ctx["current_q"] = self.request.GET.get("q", "")
         ctx["status_choices"] = Project.STATUS_CHOICES
+        ctx["type_choices"] = Project.PROJECT_TYPE_CHOICES
         ctx["is_manager"] = _is_manager(self.request)
         return ctx
 
@@ -93,6 +102,7 @@ class ProjectDetailView(LoginRequiredMixin, DetailView):
         ctx["tasks_board"] = Board.objects.filter(project=project, board_type="tasks").first()
         ctx["roadmap_board"] = Board.objects.filter(project=project, board_type="roadmap").first()
         ctx["is_manager"] = _is_manager(self.request)
+        ctx["project_type_display"] = project.get_project_type_display()
         ctx["task_stats"] = {
             "total": project.tasks.count(),
             "assigned_to_me": project.tasks.filter(assignee=self.request.user).count(),
@@ -119,6 +129,7 @@ class ProjectCreateView(RoleRequiredMixin, CreateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["action"] = "Create"
+        ctx["type_choices"] = Project.PROJECT_TYPE_CHOICES
         return ctx
 
 
@@ -136,6 +147,7 @@ class ProjectUpdateView(RoleRequiredMixin, UpdateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["action"] = "Edit"
+        ctx["type_choices"] = Project.PROJECT_TYPE_CHOICES
         return ctx
 
 
@@ -152,6 +164,7 @@ def board_view(request, slug):
         "board": board,
         "columns": board.columns.prefetch_related("tasks__assignee", "tasks__attachments").order_by("position"),
         "is_manager": _is_manager(request),
+        "project_type_display": project.get_project_type_display(),
     }
     return render(request, "projects/board.html", context)
 
@@ -167,6 +180,7 @@ def roadmap_view(request, slug):
         "board": board,
         "columns": board.columns.prefetch_related("tasks__assignee", "tasks__attachments").order_by("position"),
         "is_manager": _is_manager(request),
+        "project_type_display": project.get_project_type_display(),
     }
     return render(request, "projects/roadmap.html", context)
 
@@ -176,71 +190,75 @@ def roadmap_view(request, slug):
 @login_required
 @require_POST
 def move_task(request, task_id):
-    """Handle drag/drop task movement with safe gapped ordering."""
+    """Handle drag & drop task movement with midpoint positioning + JSON counts."""
     task = get_object_or_404(Task, id=task_id)
 
     is_manager = _is_manager(request)
     if not is_manager and task.assignee != request.user:
-        return HttpResponse("Unauthorized", status=403)
+        return JsonResponse({"ok": False, "error": "Unauthorized"}, status=403)
 
-    new_column_id = request.POST.get("column_id")
-    new_index = int(request.POST.get("position", 0))
+    try:
+        new_column_id = int(request.POST.get("column_id"))
+        new_index = int(request.POST.get("position", 0))
+    except (TypeError, ValueError):
+        return JsonResponse({"ok": False, "error": "Bad params"}, status=400)
 
-    if not new_column_id:
-        return HttpResponse("OK")
-
-    new_column = get_object_or_404(Column, id=new_column_id)
+    old_column_id = task.column_id
 
     with transaction.atomic():
-        # Move to new column (temporarily clear position to dodge unique constraint)
-        task.column = new_column
-        task.position = None
-        task.save(update_fields=["column", "position"])
+        # Move into the new column (if changed) before computing neighbors
+        if new_column_id != task.column_id:
+            task.column_id = new_column_id
 
-        # Rebuild an ordered list (excluding the task itself which has position=None)
-        siblings = list(new_column.tasks.exclude(id=task.id).order_by("position", "id"))
-        # Insert a placeholder at the target index
-        if new_index < 0:
-            new_index = 0
-        if new_index > len(siblings):
-            new_index = len(siblings)
-        siblings.insert(new_index, task)
+        # Lock siblings to compute a stable position
+        siblings_qs = (
+            Task.objects.select_for_update()
+            .filter(column_id=new_column_id)
+            .exclude(pk=task.pk)
+            .order_by("position")
+        )
+        siblings = list(siblings_qs)
+        n = len(siblings)
 
-        # Try midpoint assignment to avoid reindexing
-        def mid(a, b):
-            return a + (b - a) // 2
+        # Neighbors **in the final ordering** (i.e., including the dragged item):
+        # prev sits at index new_index-1 if that index exists in siblings,
+        # next sits at index new_index if that index exists in siblings.
+        prev_pos = siblings[new_index - 1].position if (new_index - 1) >= 0 and (new_index - 1) < n else None
+        next_pos = siblings[new_index].position if new_index < n else None
 
-        target_pos = None
-        if new_index > 0 and new_index < len(siblings) - 1:
-            prev_pos = siblings[new_index - 1].position
-            next_pos = siblings[new_index + 1].position
-            if prev_pos is not None and next_pos is not None and next_pos - prev_pos > 1:
-                target_pos = mid(prev_pos, next_pos)
-        elif new_index == 0 and len(siblings) > 1 and siblings[1].position is not None:
-            next_pos = siblings[1].position
-            # place before first; allow any non-negative int < next_pos
-            target_pos = max(0, next_pos - POSITION_STEP // 2)
-        elif new_index == len(siblings) - 1 and len(siblings) > 1 and siblings[-2].position is not None:
-            prev_pos = siblings[-2].position
-            target_pos = prev_pos + POSITION_STEP
-
-        if target_pos is None:
-            # Fallback: reindex all siblings with gapped spacing
-            pos = 0
-            for idx, s in enumerate(siblings):
-                s.position = pos
-                if s.id == task.id:
-                    target_pos = pos
-                pos += POSITION_STEP
-            # bulk update (task included)
-            for s in siblings:
-                s.save(update_fields=["position"])
-
+        # Prefer a midpoint between neighbors to avoid reindexing
+        if prev_pos is not None and next_pos is not None and prev_pos + 1 < next_pos:
+            task.position = (prev_pos + next_pos) // 2
+        elif prev_pos is not None and next_pos is None:
+            # Dropped at the end
+            task.position = prev_pos + POSITION_STEP
+        elif prev_pos is None and next_pos is not None:
+            # Dropped at the top
+            task.position = max(0, next_pos - POSITION_STEP)
         else:
-            task.position = target_pos
-            task.save(update_fields=["position"])
+            # Only item in the column
+            task.position = POSITION_STEP
 
-    return HttpResponse("OK")
+        # If a rare collision occurs, rebalance siblings by POSITION_STEP, then place
+        if Task.objects.filter(column_id=new_column_id, position=task.position).exclude(pk=task.pk).exists():
+            for idx, s in enumerate(siblings):
+                s.position = (idx + 1) * POSITION_STEP
+            Task.objects.bulk_update(siblings, ["position"])
+            task.position = (new_index + 1) * POSITION_STEP
+
+        task.save()
+
+    # Return updated counts so the client can update badges without a refresh
+    resp = {
+        "ok": True,
+        "task_id": task.id,
+        "from_column_id": old_column_id,
+        "to_column_id": new_column_id,
+        "to_count": Task.objects.filter(column_id=new_column_id).count(),
+    }
+    if old_column_id != new_column_id:
+        resp["from_count"] = Task.objects.filter(column_id=old_column_id).count()
+    return JsonResponse(resp)
 
 
 @login_required
