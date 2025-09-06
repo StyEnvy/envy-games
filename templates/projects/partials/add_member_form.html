@@ -1,0 +1,15 @@
+<form hx-post="{% url 'projects:add_member' project.slug %}" hx-target="#members-list" hx-swap="outerHTML"
+    class="flex gap-2">
+    {% csrf_token %}
+
+    <div class="form-control flex-1">
+        {{ add_member_form.username }}
+        {% if add_member_form.username.errors %}
+        <label class="label">
+            <span class="label-text-alt text-error">{{ add_member_form.username.errors.0 }}</span>
+        </label>
+        {% endif %}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Add Member</button>
+</form>

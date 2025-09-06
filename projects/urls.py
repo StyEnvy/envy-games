@@ -18,6 +18,10 @@ urlpatterns = [
     path("<slug:slug>/board/", views.board_view, name="board"),
     path("<slug:slug>/roadmap/", views.roadmap_view, name="roadmap"),
 
+    # Member management
+    path("<slug:slug>/members/add/", views.add_member, name="add_member"),
+    path("<slug:slug>/members/<int:user_id>/remove/", views.remove_member, name="remove_member"),
+
     # HTMX endpoints
     path("htmx/task/<int:task_id>/move/", views.move_task, name="move_task"),
     path("htmx/column/<int:column_id>/add-task/", views.quick_add_task, name="quick_add_task"),

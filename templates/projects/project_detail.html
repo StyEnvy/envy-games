@@ -62,7 +62,7 @@
             </div>
 
             <!-- Boards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {% if tasks_board %}
                 <a href="{% url 'projects:board' project.slug %}" class="btn btn-lg btn-outline btn-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
@@ -84,6 +84,24 @@
                     Roadmap
                 </a>
                 {% endif %}
+            </div>
+
+            <!-- Members Section -->
+            <div class="divider"></div>
+
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Project Members</h3>
+                    <div class="badge badge-neutral">{{ members.count }} member{{ members.count|pluralize }}</div>
+                </div>
+
+                {% if is_manager %}
+                <div class="mb-4" id="add-member-form">
+                    {% include "projects/partials/add_member_form.html" %}
+                </div>
+                {% endif %}
+
+                {% include "projects/partials/members_list.html" %}
             </div>
 
             <div class="divider"></div>

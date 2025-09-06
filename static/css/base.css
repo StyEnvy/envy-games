@@ -1,0 +1,124 @@
+/* Avatar improvements - ensure letters are properly centered */
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.avatar>div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 600;
+    user-select: none;
+}
+
+/* Better avatar sizes */
+.avatar-xs>div {
+    width: 1.5rem;
+    height: 1.5rem;
+    font-size: 0.625rem;
+}
+
+.avatar-sm>div {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.75rem;
+}
+
+.avatar-md>div {
+    width: 2.5rem;
+    height: 2.5rem;
+    font-size: 0.875rem;
+}
+
+/* Task card improvements */
+.card {
+    transition: all 0.2s ease;
+}
+
+.card[data-task-id] {
+    cursor: move;
+}
+
+.card[data-task-id]:hover {
+    transform: translateY(-2px);
+}
+
+/* Dragging state */
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-drag {
+    opacity: 0.9;
+    cursor: grabbing !important;
+}
+
+/* Loading states */
+.htmx-request .htmx-indicator {
+    display: inline-block;
+}
+
+.htmx-indicator {
+    display: none;
+}
+
+/* Better modal backdrop */
+.modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+/* Accessibility improvements */
+[aria-label]:focus {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+/* Better form validation states */
+.input-error {
+    border-color: #f87171;
+}
+
+.label-text-alt.text-error {
+    color: #ef4444;
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+}
+
+/* Toast notifications */
+.toast {
+    z-index: 9999;
+    animation: slide-in 0.3s ease-out;
+}
+
+@keyframes slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Column improvements */
+.min-h-\[200px\] {
+    min-height: 200px;
+}
+
+/* Better badge contrast */
+.badge {
+    font-weight: 500;
+}
+
+/* Responsive improvements */
+@media (max-width: 640px) {
+    .card[data-task-id] {
+        cursor: default;
+    }
+}

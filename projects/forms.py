@@ -81,3 +81,28 @@ class QuickTaskForm(forms.ModelForm):
                 'class': 'select select-sm select-bordered'
             }),
         }
+
+class AddMemberForm(forms.Form):
+    """Form to add a member to a project by username"""
+    username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'Enter username...'
+        })
+    )
+    
+    def __init__(self, *args, project=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.project = project
+    
+    def clean_username(self):
+        username = self.cleaned_data['username']
+        try:
+            user = User.objects.get(username=username)
+            # Check if already a member
+            if self.project and self.project.memberships.filter(user=user, is_active=True).exists():
+                raise forms.ValidationError(f"{username} is already a member of this project")
+            return username
+        except User.DoesNotExist:
+            raise forms.ValidationError(f"User '{username}' not found")

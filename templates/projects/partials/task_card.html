@@ -1,38 +1,52 @@
-<div class="card bg-base-100 shadow hover:shadow-lg transition-shadow cursor-pointer" data-task-id="{{ task.id }}"
-    hx-get="{% url 'projects:task_modal' task.id %}" hx-target="#task-modal-container" hx-trigger="click">
+{# templates/projects/partials/task_card.html #}
+<div class="card bg-base-100 shadow hover:shadow-lg transition-shadow" data-task-id="{{ task.id }}"
+    hx-get="{% url 'projects:task_modal' task.id %}" hx-target="#task-modal-container" hx-trigger="click" role="button"
+    tabindex="0" aria-label="View task: {{ task.title }}">
     <div class="card-body p-3">
-        <div class="flex justify-between items-start mb-2">
-            <span class="badge badge-sm 
-                {% if task.task_type == 'feature' %}badge-success{% endif %}
-                {% if task.task_type == 'bug' %}badge-error{% endif %}
-                {% if task.task_type == 'task' %}badge-info{% endif %}
-                {% if task.task_type == 'idea' %}badge-warning{% endif %}">
+        <div class="flex justify-between items-start mb-2 gap-2">
+            <span class="badge badge-sm
+        {% if task.task_type == 'feature' %}badge-success{% endif %}
+        {% if task.task_type == 'bug' %}badge-error{% endif %}
+        {% if task.task_type == 'task' %}badge-info{% endif %}
+        {% if task.task_type == 'idea' %}badge-warning{% endif %}">
                 {{ task.get_task_type_display }}
             </span>
             <span class="badge badge-sm badge-outline
-                {% if task.priority == 'high' %}badge-error{% endif %}
-                {% if task.priority == 'medium' %}badge-warning{% endif %}
-                {% if task.priority == 'low' %}badge-success{% endif %}">
+        {% if task.priority == 'high' %}badge-error{% endif %}
+        {% if task.priority == 'medium' %}badge-warning{% endif %}
+        {% if task.priority == 'low' %}badge-success{% endif %}">
                 {{ task.get_priority_display }}
             </span>
         </div>
 
-        <h4 class="font-medium text-sm">{{ task.title }}</h4>
+        <h4 class="font-medium text-sm line-clamp-2">{{ task.title }}</h4>
 
         <div class="flex justify-between items-center mt-2">
             <div class="flex items-center gap-2">
                 {% if task.assignee %}
-                <div class="avatar">
-                    <div class="w-6 h-6 rounded-full bg-primary text-primary-content grid place-items-center text-xs">
-                        {{ task.assignee.username|first|upper }}
+                <div class="avatar avatar-xs" title="Assigned to {{ task.assignee.username }}">
+                    <div class="rounded-full bg-primary text-primary-content">
+                        <span class="text-xs font-semibold">{{ task.assignee.username|slice:":1"|upper }}</span>
                     </div>
                 </div>
                 {% endif %}
 
                 {% if task.attachments.count > 0 %}
-                <span class="badge badge-sm badge-ghost">📎 {{ task.attachments.count }}</span>
+                <span class="badge badge-sm badge-ghost"
+                    title="{{ task.attachments.count }} attachment{{ task.attachments.count|pluralize }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                    {{ task.attachments.count }}
+                </span>
                 {% endif %}
             </div>
+
+            {% if task.due_date %}
+            <span class="text-xs opacity-60">{{ task.due_date|date:"M d" }}</span>
+            {% endif %}
         </div>
     </div>
 </div>

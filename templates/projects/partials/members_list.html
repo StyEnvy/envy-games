@@ -1,0 +1,37 @@
+{# templates/projects/partials/members_list.html #}
+<div id="members-list" class="space-y-2">
+    {% for membership in members %}
+    <div class="flex items-center justify-between p-3 bg-base-200 rounded-lg">
+        <div class="flex items-center gap-3">
+            <div class="avatar avatar-sm">
+                <div class="rounded-full bg-primary text-primary-content font-semibold">
+                    <span>{{ membership.user.username|slice:":1"|upper }}</span>
+                </div>
+            </div>
+            <div>
+                <div class="font-medium">{{ membership.user.username }}</div>
+                <div class="text-xs opacity-60">
+                    {{ membership.user.profile.get_role_display|default:"Member" }}
+                    {% if membership.user == project.created_by %} • Creator{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <span class="text-xs opacity-50">
+                Joined {{ membership.joined_at|date:"M d, Y" }}
+            </span>
+            {% if is_manager and membership.user != project.created_by %}
+            <button hx-post="{% url 'projects:remove_member' project.slug membership.user.id %}"
+                hx-headers='{"X-CSRFToken":"{{ csrf_token }}"}' hx-target="#members-list" hx-swap="outerHTML"
+                hx-confirm="Remove {{ membership.user.username }} from the project?"
+                class="btn btn-ghost btn-xs text-error" aria-label="Remove {{ membership.user.username }}">
+                Remove
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <p class="text-sm opacity-60">No members yet (except the creator)</p>
+    {% endfor %}
+</div>

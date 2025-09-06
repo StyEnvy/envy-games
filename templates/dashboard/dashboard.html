@@ -15,9 +15,7 @@
     </div>
 
     <div class="flex gap-2">
-      <a class="btn btn-outline" href="{% url 'projects:list' %}">
-        Go to Projects
-      </a>
+      <a class="btn btn-outline" href="{% url 'projects:list' %}">Go to Projects</a>
       {% if is_manager %}
       <a class="btn btn-primary" href="{% url 'projects:create' %}">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
@@ -53,7 +51,7 @@
   <!-- Three-column layout: Upcoming Tasks | Active Projects | Recent Activity -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    <!-- Column 1: Upcoming Tasks (To Do + In Progress) -->
+    <!-- Column 1: Upcoming Tasks -->
     <div class="space-y-6">
       <div class="card bg-base-100 shadow">
         <div class="card-body">
@@ -61,6 +59,7 @@
             <span class="badge badge-primary badge-sm mr-2">TO DO</span>
             My Upcoming Tasks
           </h2>
+
           {% if todo_tasks %}
           <div class="space-y-2 mb-4">
             {% for task in todo_tasks %}
@@ -68,7 +67,7 @@
               class="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
               <div class="flex-1">
                 <a href="{% url 'projects:board' task.project.slug %}" class="font-medium hover:link">
-                  {{ task.title }}
+                  {% firstof task.title task.summary task %}
                 </a>
                 <div class="text-xs opacity-70 mt-1">
                   {{ task.project.title }}
@@ -98,7 +97,7 @@
               class="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
               <div class="flex-1">
                 <a href="{% url 'projects:board' task.project.slug %}" class="font-medium hover:link">
-                  {{ task.title }}
+                  {% firstof task.title task.summary task %}
                 </a>
                 <div class="text-xs opacity-70 mt-1">
                   {{ task.project.title }}
@@ -113,6 +112,36 @@
           {% else %}
           <p class="text-sm opacity-70">Nothing in progress right now.</p>
           {% endif %}
+
+          <h3 class="text-sm font-semibold mt-4 mb-2">
+            <span class="badge badge-info badge-sm mr-2">PENDING REVIEW</span>Needs Your Review
+          </h3>
+
+          {% if pending_review_tasks %}
+          <div class="space-y-2">
+            {% for task in pending_review_tasks %}
+            <div
+              class="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
+              <div class="flex-1">
+                <a href="{% url 'projects:board' task.project.slug %}" class="font-medium hover:link">
+                  {% firstof task.title task.summary task %}
+                </a>
+                <div class="text-xs opacity-70 mt-1">
+                  {{ task.project.title }}
+                  {% if task.priority == 'high' %}
+                  <span class="badge badge-error badge-xs ml-2">HIGH</span>
+                  {% endif %}
+                  {% if task.updated_at %}
+                  <span class="ml-2">• updated {{ task.updated_at|timesince }} ago</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-sm opacity-70">No items pending your review.</p>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -125,13 +154,12 @@
             <h2 class="card-title text-lg">Active Projects</h2>
             <a class="link text-sm" href="{% url 'projects:list' %}">View all</a>
           </div>
+
           {% if active_projects %}
           <div class="space-y-3">
             {% for project in active_projects %}
             <div class="border-l-4 border-primary pl-3">
-              <a href="{% url 'projects:detail' project.slug %}" class="font-medium hover:link">
-                {{ project.title }}
-              </a>
+              <a href="{% url 'projects:detail' project.slug %}" class="font-medium hover:link">{{ project.title }}</a>
               <div class="text-xs opacity-70 mt-1">
                 v{{ project.version }} • {{ project.get_status_display }}
                 {% if project.my_tasks > 0 %}
@@ -163,21 +191,51 @@
       <div class="card bg-base-100 shadow">
         <div class="card-body">
           <h2 class="card-title text-lg mb-4">Recent Activity</h2>
+
           {% if recent_activity %}
           <div class="space-y-2 max-h-96 overflow-y-auto">
             {% for activity in recent_activity %}
             <div class="text-sm border-l-2 border-base-300 pl-3 py-1">
               <div class="font-medium">
-                {{ activity.title }}
+                {% if activity.is_roadmap_item %}
+                <a href="{% url 'projects:roadmap' activity.project.slug %}" class="hover:link">
+                  {% firstof activity.title activity.summary activity %}
+                </a>
+                {% else %}
+                <a href="{% url 'projects:board' activity.project.slug %}" class="hover:link">
+                  {% firstof activity.title activity.summary activity %}
+                </a>
+                {% endif %}
               </div>
+
               <div class="text-xs opacity-70">
                 {{ activity.project.title }}
-                {% if activity.created_at >= activity.updated_at %}
-                • Created by {{ activity.created_by.username }}
+                {% if activity.created_at == activity.updated_at %}
+                • Created by {{ activity.created_by.username }} • {{ activity.created_at|timesince }} ago
                 {% else %}
-                • Updated
+                •
+                {% with act=activity.last_action|default:"update" %}
+                {% if act == "create" %}
+                Created
+                {% elif act == "delete" %}
+                Deleted
+                {% elif act == "status" %}
+                Status Changed
+                {% elif act == "member_add" %}
+                Member Added
+                {% elif act == "member_remove" %}
+                Member Removed
+                {% elif act == "task_move" %}
+                Task Moved
+                {% elif act == "convert" %}
+                Converted
+                {% else %}
+                Updated
                 {% endif %}
-                • {{ activity.updated_at|timesince }} ago
+                {% endwith %}
+                by {{ activity.last_actor|default:activity.created_by.username }} • {{ activity.updated_at|timesince }}
+                ago
+                {% endif %}
               </div>
             </div>
             {% endfor %}
@@ -188,72 +246,59 @@
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Manager-only sections below the three-column row (optional, unchanged behavior) -->
-  {% if is_manager %}
-  {% if unassigned_urgent %}
-  <div class="card bg-error/10 border border-error/20 mt-6">
-    <div class="card-body">
-      <h2 class="card-title text-lg text-error">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
-          stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        Unassigned High Priority Tasks
-      </h2>
-      <div class="space-y-2">
-        {% for task in unassigned_urgent %}
-        <div class="p-3 bg-base-100 rounded-lg">
-          <a href="{% url 'projects:board' task.project.slug %}" class="font-medium hover:link">
-            {{ task.title }}
-          </a>
-          <div class="text-xs opacity-70 mt-1">
-            {{ task.project.title }} • {{ task.column.name }}
+    {% if is_manager %}
+    {% if unassigned_urgent %}
+    <div class="card bg-error/10 border border-error/20 mt-6">
+      <div class="card-body">
+        <h2 class="card-title text-lg text-error">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          Unassigned High Priority Tasks
+        </h2>
+        <div class="space-y-2">
+          {% for task in unassigned_urgent %}
+          <div class="p-3 bg-base-100 rounded-lg">
+            <a href="{% url 'projects:board' task.project.slug %}" class="font-medium hover:link">
+              {% firstof task.title task.summary task %}
+            </a>
+            <div class="text-xs opacity-70 mt-1">{{ task.project.title }} • {{ task.column.name }}</div>
           </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
     </div>
-  </div>
-  {% endif %}
+    {% endif %}
 
-  {% if roadmap_review %}
-  <div class="card bg-info/10 border border-info/20 mt-6">
-    <div class="card-body">
-      <h2 class="card-title text-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
-          stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-        Roadmap Items Pending Review
-      </h2>
-      <div class="space-y-2">
-        {% for item in roadmap_review %}
-        <div class="p-3 bg-base-100 rounded-lg">
-          <a href="{% url 'projects:roadmap' item.project.slug %}" class="font-medium hover:link">
-            {{ item.title }}
-          </a>
-          <div class="text-xs opacity-70 mt-1">
-            {{ item.project.title }} • Submitted by {{ item.created_by.username }}
+    {% if roadmap_review %}
+    <div class="card bg-info/10 border border-info/20 mt-6">
+      <div class="card-body">
+        <h2 class="card-title text-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Roadmap Items Pending Review
+        </h2>
+        <div class="space-y-2">
+          {% for item in roadmap_review %}
+          <div class="p-3 bg-base-100 rounded-lg">
+            <a href="{% url 'projects:roadmap' item.project.slug %}" class="font-medium hover:link">
+              {% firstof item.title item.summary item %}
+            </a>
+            <div class="text-xs opacity-70 mt-1">{{ item.project.title }} • Submitted by {{ item.created_by.username }}
+            </div>
           </div>
+          {% endfor %}
         </div>
-        {% endfor %}
       </div>
     </div>
+    {% endif %}
+    {% endif %}
   </div>
-  {% endif %}
-  {% endif %}
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-  // Auto-refresh dashboard every 60 seconds
-  setTimeout(() => {
-    window.location.reload();
-  }, 60000);
-</script>
 {% endblock %}
