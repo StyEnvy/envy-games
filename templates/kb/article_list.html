@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Knowledge Base - Envy Games{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto py-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">Knowledge Base</h1>
+        <div class="flex gap-2">
+            {% if user.profile.is_project_manager %}
+            <a href="{% url 'kb:category_list' %}" class="btn btn-secondary btn-sm">Manage Categories</a>
+            {% endif %}
+            <a href="{% url 'kb:article_create' %}" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Article
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Sidebar -->
+        <div class="lg:col-span-1">
+            <!-- Search -->
+            <form method="get" class="mb-4">
+                <input type="text" name="q" value="{{ q }}" placeholder="Search articles..."
+                    class="input input-bordered w-full" />
+            </form>
+
+            <!-- Categories -->
+            <div class="card bg-base-100 shadow mb-4">
+                <div class="card-body p-4">
+                    <h3 class="font-semibold mb-2">Categories</h3>
+                    <ul class="menu menu-compact p-0">
+                        <li><a href="{% url 'kb:article_list' %}"
+                                class="{% if not current_category %}active{% endif %}">All</a></li>
+                        {% for cat in categories %}
+                        <li>
+                            <a href="?category={{ cat.slug }}"
+                                class="{% if current_category == cat.slug %}active{% endif %}">
+                                {{ cat.name }} <span class="badge badge-sm">{{ cat.article_count }}</span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Popular Tags -->
+            {% if popular_tags %}
+            <div class="card bg-base-100 shadow">
+                <div class="card-body p-4">
+                    <h3 class="font-semibold mb-2">Popular Tags</h3>
+                    <div class="flex flex-wrap gap-1">
+                        {% for tag, count in popular_tags %}
+                        <a href="?tag={{ tag }}"
+                            class="badge badge-outline {% if current_tag == tag %}badge-primary{% endif %}">
+                            {{ tag }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Articles -->
+        <div class="lg:col-span-3">
+            <!-- Sort Options -->
+            <div class="flex justify-between items-center mb-4">
+                <div class="text-sm opacity-70">{{ page_obj.paginator.count }} articles found</div>
+                <select onchange="window.location.href='?{{ querystring }}&sort=' + this.value"
+                    class="select select-bordered select-sm">
+                    <option value="-published_at" {% if sort=='-published_at' %}selected{% endif %}>Newest</option>
+                    <option value="published_at" {% if sort=='published_at' %}selected{% endif %}>Oldest</option>
+                    <option value="title" {% if sort=='title' %}selected{% endif %}>Title A-Z</option>
+                    <option value="-title" {% if sort=='-title' %}selected{% endif %}>Title Z-A</option>
+                    <option value="-views_count" {% if sort=='-views_count' %}selected{% endif %}>Most Viewed</option>
+                </select>
+            </div>
+
+            <!-- Article Cards -->
+            <div class="space-y-4">
+                {% for article in articles %}
+                <div class="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+                    <div class="card-body">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                {% if article.is_pinned %}
+                                <span class="badge badge-warning badge-sm mb-1">Pinned</span>
+                                {% endif %}
+                                <h2 class="card-title">
+                                    <a href="{{ article.get_absolute_url }}" class="link link-hover">{{ article.title
+                                        }}</a>
+                                </h2>
+                                <p class="text-sm opacity-70 mt-1">{{ article.summary }}</p>
+
+                                <div class="flex flex-wrap gap-2 mt-3">
+                                    {% if article.category %}
+                                    <span class="badge badge-ghost">{{ article.category.name }}</span>
+                                    {% endif %}
+                                    {% for tag in article.tag_list|slice:":3" %}
+                                    <span class="badge badge-outline badge-sm">{{ tag }}</span>
+                                    {% endfor %}
+                                    {% if article.project_links.exists %}
+                                    <span class="badge badge-info badge-sm">{{ article.project_links.count }} project{{
+                                        article.project_links.count|pluralize }}</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="text-right text-sm opacity-70 ml-4">
+                                <div>{{ article.author.username }}</div>
+                                <div>{{ article.published_at|date:"M d, Y" }}</div>
+                                <div class="text-xs">{{ article.views_count }} view{{ article.views_count|pluralize }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                        class="stroke-info shrink-0 w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>No articles found. Try adjusting your filters or create the first one!</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <div class="flex justify-center mt-6">
+                <div class="btn-group">
+                    {% if page_obj.has_previous %}
+                    <a href="?{{ querystring }}&page={{ page_obj.previous_page_number }}" class="btn btn-sm">«</a>
+                    {% endif %}
+                    <button class="btn btn-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</button>
+                    {% if page_obj.has_next %}
+                    <a href="?{{ querystring }}&page={{ page_obj.next_page_number }}" class="btn btn-sm">»</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

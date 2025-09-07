@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Time Entries — Time Tracking{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <div class="breadcrumbs text-sm mb-4">
+        <ul>
+            <li>Timetracking</li>
+            <li>Entries</li>
+        </ul>
+    </div>
+
+    <div class="flex items-center justify-between mb-3">
+        <h2 class="text-2xl font-bold">Time Entries</h2>
+        <div class="flex gap-2">
+            <a class="btn btn-outline" href="{% url 'timetracking:weekly_report' %}">Weekly report</a>
+            <a class="btn btn-primary" href="{% url 'timetracking:entry_create' %}">Add entry</a>
+        </div>
+    </div>
+
+    <form method="get" class="card bg-base-100 shadow mb-4">
+        <div class="card-body grid grid-cols-1 md:grid-cols-5 gap-3">
+            <div>
+                <label class="label"><span class="label-text">Project</span></label>
+                <select name="project" class="select select-bordered w-full">
+                    <option value="">All</option>
+                    {% for p in projects %}
+                    <option value="{{ p.id }}" {% if request.GET.project==p.id|stringformat:'s' %} selected{% endif %}>
+                        {{ p.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="label"><span class="label-text">Task</span></label>
+                <select name="task" class="select select-bordered w-full">
+                    <option value="">All</option>
+                    {% for t in tasks %}
+                    <option value="{{ t.id }}" {% if request.GET.task==t.id|stringformat:'s' %} selected{% endif %}>{{
+                        t.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="label"><span class="label-text">User</span></label>
+                <input type="text" class="input input-bordered w-full" name="user" value="{{ request.GET.user }}"
+                    placeholder="User ID">
+            </div>
+            <div>
+                <label class="label"><span class="label-text">From</span></label>
+                <input type="date" class="input input-bordered w-full" name="from" value="{{ request.GET.from }}">
+            </div>
+            <div>
+                <label class="label"><span class="label-text">To</span></label>
+                <input type="date" class="input input-bordered w-full" name="to" value="{{ request.GET.to }}">
+            </div>
+            <div class="md:col-span-5 flex justify-end"><button class="btn">Filter</button></div>
+        </div>
+    </form>
+
+    <div class="card bg-base-100 shadow">
+        <div class="card-body overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Project</th>
+                        <th>Task</th>
+                        <th>User</th>
+                        <th class="text-right">Minutes</th>
+                        <th>Billable</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for e in entries %}
+                    <tr>
+                        <td>{{ e.work_date }}</td>
+                        <td>{{ e.project.title }}</td>
+                        <td>{{ e.task.title }}</td>
+                        <td>{{ e.user.username }}</td>
+                        <td class="text-right">{{ e.duration_minutes }}</td>
+                        <td>{% if e.billable %}<span class="badge badge-primary">Yes</span>{% else %}<span
+                                class="badge">No</span>{% endif %}</td>
+                        <td class="text-right">
+                            <a class="btn btn-xs btn-ghost" href="{% url 'timetracking:entry_edit' e.id %}">Edit</a>
+                            <a class="btn btn-xs btn-ghost" href="{% url 'timetracking:entry_delete' e.id %}">Delete</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="opacity-70">No entries.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if is_paginated %}
+            <div class="join mt-4">
+                {% if page_obj.has_previous %}<a class="join-item btn"
+                    href="?page={{ page_obj.previous_page_number }}">Prev</a>{% endif %}
+                <button class="join-item btn">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</button>
+                {% if page_obj.has_next %}<a class="join-item btn"
+                    href="?page={{ page_obj.next_page_number }}">Next</a>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

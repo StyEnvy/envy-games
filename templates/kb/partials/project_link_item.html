@@ -1,0 +1,10 @@
+<div class="text-sm">
+    <a href="{% url 'projects:detail' link.project.slug %}" class="link link-hover">{{ link.project.title }}</a>
+    {% if link.task %}
+    <span class="opacity-70">→ {{ link.task.title }}</span>
+    {% endif %}
+    {% if user == article.author or user.profile.is_project_manager %}
+    <button hx-delete="{% url 'kb:remove_link' 'project' link.id %}" hx-target="closest div" hx-swap="outerHTML"
+        class="btn btn-ghost btn-xs text-error float-right">×</button>
+    {% endif %}
+</div>

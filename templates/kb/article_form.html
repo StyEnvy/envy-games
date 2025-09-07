@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{% if is_create %}Create Article{% else %}Edit Article{% endif %} - Knowledge Base{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+<script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto py-6">
+    <h1 class="text-3xl font-bold mb-6">{% if is_create %}Create New Article{% else %}Edit Article{% endif %}</h1>
+
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">Title</span>
+            </label>
+            {{ form.title }}
+            {% if form.title.errors %}
+            <label class="label">
+                <span class="label-text-alt text-error">{{ form.title.errors.0 }}</span>
+            </label>
+            {% endif %}
+        </div>
+
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">Summary</span>
+            </label>
+            {{ form.summary }}
+            {% if form.summary.errors %}
+            <label class="label">
+                <span class="label-text-alt text-error">{{ form.summary.errors.0 }}</span>
+            </label>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Category</span>
+                </label>
+                {{ form.category }}
+            </div>
+
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Status</span>
+                </label>
+                {{ form.status }}
+            </div>
+        </div>
+
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">Content (Markdown supported)</span>
+            </label>
+            {{ form.content }}
+            {% if form.content.errors %}
+            <label class="label">
+                <span class="label-text-alt text-error">{{ form.content.errors.0 }}</span>
+            </label>
+            {% endif %}
+        </div>
+
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">Tags (comma-separated)</span>
+            </label>
+            {{ form.tags }}
+        </div>
+
+        <div class="form-control">
+            <label class="cursor-pointer label justify-start">
+                {{ form.is_pinned }}
+                <span class="label-text ml-2">Pin this article</span>
+            </label>
+        </div>
+
+        {% if not is_create %}
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">Change notes (optional)</span>
+            </label>
+            <input type="text" name="change_notes" class="input input-bordered w-full"
+                placeholder="Brief description of changes">
+        </div>
+        {% endif %}
+
+        <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                {% if is_create %}Create Article{% else %}Save Changes{% endif %}
+            </button>
+            <a href="{% if is_create %}{% url 'kb:article_list' %}{% else %}{{ article.get_absolute_url }}{% endif %}"
+                class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+    var simplemde = new SimpleMDE({
+        element: document.getElementById("id_content"),
+        spellChecker: false,
+        status: false,
+        toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|",
+            "link", "image", "table", "|", "preview", "side-by-side", "fullscreen", "|", "guide"]
+    });
+</script>
+{% endblock %}

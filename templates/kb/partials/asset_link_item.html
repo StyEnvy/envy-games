@@ -1,0 +1,10 @@
+<div class="text-sm">
+    <a href="{% url 'assetcatalog:detail' link.asset.slug %}" class="link link-hover">{{ link.asset.title }}</a>
+    {% if link.description %}
+    <span class="opacity-70 text-xs block">{{ link.description }}</span>
+    {% endif %}
+    {% if user == article.author or user.profile.is_project_manager %}
+    <button hx-delete="{% url 'kb:remove_link' 'asset' link.id %}" hx-target="closest div" hx-swap="outerHTML"
+        class="btn btn-ghost btn-xs text-error float-right">×</button>
+    {% endif %}
+</div>

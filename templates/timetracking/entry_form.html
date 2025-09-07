@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{% if object %}Edit Entry{% else %}Add Entry{% endif %} — Time Tracking{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="breadcrumbs text-sm mb-4">
+        <ul>
+            <li><a href="{% url 'timetracking:entry_list' %}">Entries</a></li>
+            <li>{% if object %}Edit{% else %}New{% endif %}</li>
+        </ul>
+    </div>
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title mb-4">{% if object %}Edit Entry{% else %}New Entry{% endif %}</h2>
+            <form method="post">{% csrf_token %}
+                {{ form.non_field_errors }}
+                <div class="form-control mb-2">{{ form.project.label_tag }} {{ form.project }}</div>
+                <div class="form-control mb-2">{{ form.task.label_tag }} {{ form.task }}</div>
+                <div class="form-control mb-2">{{ form.work_date.label_tag }} {{ form.work_date }}</div>
+                <div class="form-control mb-2">{{ form.billable.label_tag }} {{ form.billable }}</div>
+                <div class="form-control mb-2">{{ form.notes.label_tag }} {{ form.notes }}</div>
+                <div class="divider">Duration</div>
+                <div class="form-control mb-4">{{ form.duration.label_tag }} {{ form.duration }}<span
+                        class="label-text-alt">Examples: 90, 1:30, 2h, 1h15</span></div>
+                <div class="flex gap-2 justify-end">
+                    <a class="btn btn-ghost" href="{% url 'timetracking:entry_list' %}">Cancel</a>
+                    <button class="btn btn-primary" type="submit">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

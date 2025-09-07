@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Time Tracking — Projects{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="breadcrumbs text-sm mb-4">
+        <ul>
+            <li><a href="{% url 'timetracking:entry_list' %}">Timetracking</a></li>
+            <li>Projects</li>
+        </ul>
+    </div>
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="card-title">Projects</h2>
+                {# Django templates can't use Python tuple literals in `in` tests. Use explicit ORs. #}
+                {% if user.is_superuser or user.profile.role == 'pm' or user.profile.role == 'PROJECT_MANAGER' %}
+                <form method="post" class="flex gap-2">{% csrf_token %}
+                    <input type="text" name="title" placeholder="New project title" class="input input-bordered"
+                        required>
+                    <button class="btn btn-primary" type="submit">Add</button>
+                </form>
+                {% endif %}
+            </div>
+            <form method="get" class="flex gap-2 mb-4">
+                <input class="input input-bordered" type="text" name="q" placeholder="Search"
+                    value="{{ request.GET.q }}">
+                <select class="select select-bordered" name="active">
+                    <option value="">All</option>
+                    <option value="true" {% if request.GET.active=='true' %}selected{% endif %}>Active</option>
+                    <option value="false" {% if request.GET.active=='false' %}selected{% endif %}>Inactive</option>
+                </select>
+                <button class="btn">Filter</button>
+            </form>
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Active</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in projects %}
+                        <tr>
+                            <td class="font-medium">{{ p.title }}</td>
+                            <td>
+                                {% if p.is_active %}
+                                <span class="badge badge-success">Active</span>
+                                {% else %}
+                                <span class="badge">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                <a class="btn btn-sm" href="{% url 'timetracking:task_list' p.id %}">Tasks</a>
+                                <a class="btn btn-sm btn-ghost"
+                                    href="{% url 'timetracking:project_edit' p.id %}">Edit</a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="opacity-70">No projects yet.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

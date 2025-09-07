@@ -18,6 +18,8 @@ urlpatterns = [
     path("app/dashboard/", include("dashboard.urls")),
     path("app/projects/", include("projects.urls")),
     path("app/assets/", include("assetcatalog.urls")),
+    path("app/kb/", include("kb.urls")),
+    path("app/timetracking/", include("timetracking.urls")),
 ]
 
 if settings.DEBUG:

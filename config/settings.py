@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     "public",
     "audits",
     "assetcatalog",
+    "timetracking",
+    "kb",
 ]
 
 # --- Middleware ---
