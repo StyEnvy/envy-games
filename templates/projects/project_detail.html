@@ -30,17 +30,29 @@
                     </div>
                 </div>
 
-                {% if is_manager %}
-                <a href="{% url 'projects:edit' project.slug %}" class="btn btn-primary btn-sm md:btn-md">
-                    <!-- pencil icon -->
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 mr-2" viewBox="0 0 24 24"
-                        fill="none" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M15.232 5.232l3.536 3.536M4 20h4l9.268-9.268a2 2 0 000-2.828l-1.172-1.172a2 2 0 00-2.828 0L4 16v4z" />
-                    </svg>
-                    Edit Project Details
-                </a>
-                {% endif %}
+                <div class="flex gap-2">
+                    <a href="{% url 'projects:project_assets' project.slug %}" class="btn btn-outline btn-sm md:btn-md">
+                        <!-- folder icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 mr-2" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 7h4l2 2h10a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                        </svg>
+                        Project Assets
+                    </a>
+
+                    {% if is_manager %}
+                    <a href="{% url 'projects:edit' project.slug %}" class="btn btn-primary btn-sm md:btn-md">
+                        <!-- pencil icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 mr-2" viewBox="0 0 24 24"
+                            fill="none" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15.232 5.232l3.536 3.536M4 20h4l9.268-9.268a2 2 0 000-2.828l-1.172-1.172a2 2 0 00-2.828 0L4 16v4z" />
+                        </svg>
+                        Edit Project Details
+                    </a>
+                    {% endif %}
+                </div>
             </div>
 
             <p class="mb-6 opacity-80">{{ project.description|default:"No description provided" }}</p>

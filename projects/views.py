@@ -1,10 +1,10 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.models import User
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_POST, require_http_methods
+from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest
 from django.urls import reverse_lazy
 from django.db import transaction
@@ -14,6 +14,8 @@ import logging
 from .forms import ProjectForm, TaskForm, QuickTaskForm, AddMemberForm
 from .models import Project, Board, Column, Task, ProjectMembership 
 from .utils import POSITION_STEP
+
+from assetcatalog.models import Asset, AssetType
 
 from accounts.models import UserRole
 from accounts.views import RoleRequiredMixin, role_required, user_has_role
@@ -591,3 +593,83 @@ def remove_member(request, slug, user_id):
     except Exception as e:
         logger.error(f"Error removing member {user_id} from project {slug}: {str(e)}")
         return HttpResponseBadRequest("Failed to remove member")
+
+## Asset catalog integration
+
+class ProjectAssetListView(LoginRequiredMixin, ListView):
+    """Project-scoped list of assets sourced from assetcatalog."""
+    model = Asset
+    template_name = "projects/project_asset_list.html"
+    context_object_name = "assets"
+    paginate_by = 12
+
+    SORT_ALLOWLIST = {"created_at", "-created_at", "title", "-title", "updated_at", "-updated_at"}
+    SORT_LABELS = {
+        "-created_at": "Newest first",
+        "created_at": "Oldest first",
+        "title": "Title A–Z",
+        "-title": "Title Z–A",
+        "-updated_at": "Recently updated",
+        "updated_at": "Least recently updated",
+    }
+    PER_CHOICES = (12, 24, 48, 96)
+
+    def dispatch(self, request, *args, **kwargs):
+        self.project = get_object_or_404(Project, slug=kwargs["slug"])
+        if not self.project.user_can_view(request.user):
+            raise PermissionDenied("You do not have access to this project.")
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_paginate_by(self, queryset):
+        try:
+            per = int(self.request.GET.get("per", self.paginate_by))
+        except (TypeError, ValueError):
+            per = self.paginate_by
+        return max(6, min(per, 96))
+
+    def get_queryset(self):
+        qs = (
+            Asset.objects.filter(projects=self.project)
+            .select_related("current_version", "created_by")
+            .prefetch_related("projects")
+            .distinct()
+        )
+
+        q = (self.request.GET.get("q") or "").strip()
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q) | Q(tags__icontains=q))
+
+        atype = (self.request.GET.get("type") or "").strip()
+        if atype and atype in dict(AssetType.choices):
+            qs = qs.filter(asset_type=atype)
+
+        sort = (self.request.GET.get("sort") or "-created_at").strip()
+        if sort not in self.SORT_ALLOWLIST:
+            sort = "-created_at"
+        self._current_sort = sort
+        return qs.order_by(sort, "-id")
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx["project"] = self.project
+
+        st = (self.request.GET.get("type") or "")
+        sort = getattr(self, "_current_sort", "-created_at")
+        per = self.get_paginate_by(self.object_list)
+
+        ctx["q"] = self.request.GET.get("q", "")
+        ctx["selected_type"] = st
+        ctx["sort"] = sort
+        ctx["per"] = per
+
+        ctx["asset_types_annot"] = [(val, label, (val == st)) for val, label in AssetType.choices]
+        ctx["sort_options"] = [(val, self.SORT_LABELS[val], val == sort) for val in (
+            "-created_at", "created_at", "title", "-title", "-updated_at", "updated_at"
+        )]
+        ctx["per_options"] = [(n, str(n), n == per) for n in self.PER_CHOICES]
+
+        params = self.request.GET.copy()
+        params.pop("page", None)
+        ctx["querystring"] = params.urlencode()
+        ctx["has_filters"] = bool(ctx["q"] or ctx["selected_type"] or self.request.GET.get("sort") or self.request.GET.get("per"))
+        return ctx

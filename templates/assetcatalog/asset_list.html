@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Assets — Envy Games{% endblock %}
+{% block content %}
+<div class="container mx-auto p-4 pt-20 max-w-7xl">
+
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold">Asset Catalog</h1>
+        <a class="btn btn-primary" href="{% url 'assetcatalog:create' %}">New Asset</a>
+    </div>
+
+    <form method="get" class="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <div class="form-control w-full">
+            <label class="label"><span class="label-text">Search</span></label>
+            <input class="input input-bordered w-full" type="text" name="q" value="{{ q }}"
+                placeholder="Title, description, tags">
+        </div>
+
+        <div class="form-control">
+            <label class="label"><span class="label-text">Type</span></label>
+            <select name="type" class="select select-bordered w-full">
+                <option value="" {% if not selected_type %}selected{% endif %}>All</option>
+                {% for val, label, is_selected in asset_types_annot %}
+                <option value="{{ val }}" {% if is_selected %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label"><span class="label-text">Sort</span></label>
+            <select name="sort" class="select select-bordered w-full">
+                {% for val, label, is_selected in sort_options %}
+                <option value="{{ val }}" {% if is_selected %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label"><span class="label-text">Per page</span></label>
+            <select name="per" class="select select-bordered w-full">
+                {% for val, label, is_selected in per_options %}
+                <option value="{{ val }}" {% if is_selected %} selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="flex gap-2">
+            <button class="btn btn-outline" type="submit">Apply</button>
+            <a class="btn btn-ghost" href="{% url 'assetcatalog:list' %}">Reset</a>
+        </div>
+    </form>
+
+    {% if assets %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for a in assets %}
+        <a href="{% url 'assetcatalog:detail' slug=a.slug %}"
+            class="card bg-base-100 shadow hover:shadow-lg transition">
+            <div class="card-body">
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title line-clamp-1">{{ a.title }}</h2>
+                    <div class="badge badge-outline">{{ a.get_asset_type_display }}</div>
+                </div>
+
+                <p class="text-sm opacity-70 line-clamp-2">{{ a.description|default:"" }}</p>
+
+                <div class="mt-2 text-xs opacity-70">
+                    {% if a.current_version %}
+                    v{{ a.current_version.number }} • {{ a.current_version.content_type }} • {{
+                    a.current_version.size_bytes|floatformat:-2 }} B
+                    {% else %}
+                    No versions yet
+                    {% endif %}
+                </div>
+
+                {% if a.tag_list %}
+                <div class="mt-2 flex flex-wrap gap-1">
+                    {% for t in a.tag_list %}
+                    <span class="badge badge-ghost">{{ t }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if is_paginated %}
+    <div class="mt-6">
+        <div class="join">
+            {% if page_obj.has_previous %}
+            <a class="btn join-item"
+                href="?{% if querystring %}{{ querystring }}&{% else %}q={{ q|urlencode }}&type={{ selected_type|urlencode }}&sort={{ sort|urlencode }}&per={{ per|urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">Prev</a>
+            {% endif %}
+            <span class="btn join-item">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+            <a class="btn join-item"
+                href="?{% if querystring %}{{ querystring }}&{% else %}q={{ q|urlencode }}&type={{ selected_type|urlencode }}&sort={{ sort|urlencode }}&per={{ per|urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="alert">No assets found.
+        <a class="link" href="{% url 'assetcatalog:create' %}">Create your first asset</a>.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

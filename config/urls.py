@@ -17,6 +17,7 @@ urlpatterns = [
     # Internal app (protected by middleware)
     path("app/dashboard/", include("dashboard.urls")),
     path("app/projects/", include("projects.urls")),
+    path("app/assets/", include("assetcatalog.urls")),
 ]
 
 if settings.DEBUG:

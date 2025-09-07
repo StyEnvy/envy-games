@@ -1,6 +1,8 @@
 ﻿from django.urls import path
 from . import views
 
+from .views import ProjectAssetListView
+
 app_name = "projects"
 
 urlpatterns = [
@@ -27,4 +29,7 @@ urlpatterns = [
     path("htmx/column/<int:column_id>/add-task/", views.quick_add_task, name="quick_add_task"),
     path("htmx/task/<int:task_id>/modal/", views.task_modal, name="task_modal"),
     path("htmx/task/<int:task_id>/convert/", views.convert_to_task, name="convert_to_task"),
+
+    #Asset Catalog integration
+    path("<slug:slug>/assets/", ProjectAssetListView.as_view(), name="project_assets"),
 ]

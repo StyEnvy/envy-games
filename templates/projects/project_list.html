@@ -5,15 +5,26 @@
 <div class="mb-6">
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Projects</h1>
-        {% if is_manager %}
-        <a href="{% url 'projects:create' %}" class="btn btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
-                stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            New Project
-        </a>
-        {% endif %}
+        <div class="flex gap-2">
+            <a href="{% url 'assetcatalog:list' %}" class="btn btn-outline">
+                <!-- grid icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 6h4v4H4V6zm6 0h4v4h-4V6zm6 0h4v4h-4V6zM4 12h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4zM4 18h4v4H4v-4zm6 0h4v4h-4v-4zm6 0h4v4h-4v-4z" />
+                </svg>
+                Browse Asset Catalog
+            </a>
+            {% if is_manager %}
+            <a href="{% url 'projects:create' %}" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                New Project
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     <!-- Search + Sort + Page Size -->
@@ -113,7 +124,10 @@
                     <div class="text-xs opacity-60">
                         by {{ project.created_by.username }}
                     </div>
-                    <a href="{% url 'projects:detail' project.slug %}" class="btn btn-sm btn-primary">View</a>
+                    <div class="flex gap-2">
+                        <a href="{% url 'projects:project_assets' project.slug %}" class="btn btn-sm">Assets</a>
+                        <a href="{% url 'projects:detail' project.slug %}" class="btn btn-sm btn-primary">View</a>
+                    </div>
                 </div>
             </div>
         </article>

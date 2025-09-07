@@ -12,7 +12,7 @@
         <h3 id="modal-title" class="font-bold text-lg mb-4">Task Details</h3>
 
         <form method="post" hx-post="{% url 'projects:task_modal' task.id %}" hx-target="[data-task-id='{{ task.id }}']"
-            hx-swap="outerHTML">
+            hx-swap="outerHTML" hx-on::after-request="if (event.detail.successful) this.closest('dialog')?.remove()">
             {% csrf_token %}
 
             <div class="form-control mb-4">

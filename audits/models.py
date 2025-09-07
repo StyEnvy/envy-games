@@ -63,25 +63,55 @@ class AuditLog(models.Model):
         return f"{self.get_action_display()} {self.object_repr} by {self.user} at {self.timestamp}"
 
     @classmethod
-    def log(cls, obj, action, user, changes=None, request=None, project=None):
+    def log(cls, obj, action, user=None, changes=None, request=None, project=None):
         """
-        Create an audit log entry.
+        Create an audit log entry with smart defaults:
+        - user/request are inferred from thread-local middleware if not supplied
+        - project is inferred from common relations (project, board.project, column.board.project, membership.project)
         """
-        content_type = ContentType.objects.get_for_model(obj.__class__)
+        from django.contrib.contenttypes.models import ContentType
+        from django.apps import apps
 
-        # Try to get project if not passed
+        # Lazy imports to avoid circulars
+        Project = apps.get_model("projects", "Project")
+        ProjectMembership = apps.get_model("projects", "ProjectMembership")
+        Task = apps.get_model("projects", "Task")
+        Board = apps.get_model("projects", "Board")
+        Column = apps.get_model("projects", "Column")
+
+        # Fallback to thread-local user/request
+        if user is None:
+            try:
+                from .middleware import get_current_user, get_current_request
+                user = get_current_user()
+                request = request or get_current_request()
+            except Exception:
+                pass
+
+        # Infer project if not explicitly given
         if project is None:
-            if hasattr(obj, "project"):
-                project = obj.project
-            from projects.models import Project, ProjectMembership
-            if isinstance(obj, Project):
-                project = obj
-            elif isinstance(obj, ProjectMembership):
-                project = obj.project
+            try:
+                if hasattr(obj, "project"):
+                    project = obj.project
+                elif isinstance(obj, Task):
+                    project = getattr(getattr(obj, "column", None), "board", None)
+                    project = getattr(project, "project", None)
+                elif isinstance(obj, Column):
+                    project = getattr(getattr(obj, "board", None), "project", None)
+                elif isinstance(obj, Board):
+                    project = getattr(obj, "project", None)
+                elif isinstance(obj, ProjectMembership):
+                    project = obj.project
+                elif isinstance(obj, Project):
+                    project = obj
+            except Exception:
+                project = None
+
+        content_type = ContentType.objects.get_for_model(obj.__class__)
 
         log_entry = cls.objects.create(
             content_type=content_type,
-            object_id=obj.pk,
+            object_id=getattr(obj, "pk", None),
             object_repr=str(obj)[:200],
             action=action,
             user=user,
@@ -89,11 +119,11 @@ class AuditLog(models.Model):
             project=project,
         )
 
-        # Add request metadata if available
+        # Attach request metadata if we have it
         if request:
             log_entry.ip_address = cls._get_client_ip(request)
             log_entry.user_agent = request.META.get("HTTP_USER_AGENT", "")[:500]
-            log_entry.save()
+            log_entry.save(update_fields=["ip_address", "user_agent"])
 
         return log_entry
 
