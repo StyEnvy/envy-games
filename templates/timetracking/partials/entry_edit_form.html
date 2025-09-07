@@ -1,0 +1,47 @@
+<h3 class="font-bold text-lg mb-3">Edit Entry — {{ entry.work_date }}</h3>
+<form hx-post="{% url 'timetracking:entry_edit' entry.id %}" hx-target="body" hx-swap="none">
+    <div class="grid grid-cols-1 gap-4">
+        <label class="form-control">
+            <div class="label"><span class="label-text">Project</span></div>
+            {{ form.project }}
+        </label>
+
+        <label class="form-control">
+            <div class="label"><span class="label-text">Task</span></div>
+            {{ form.task }}
+        </label>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <label class="form-control">
+                <div class="label"><span class="label-text">Date</span></div>
+                {{ form.work_date }}
+            </label>
+
+            <label class="form-control">
+                <div class="label"><span class="label-text">Duration</span></div>
+                {{ form.duration }}
+            </label>
+
+            <label class="form-control">
+                <div class="label"><span class="label-text">Billable</span></div>
+                {{ form.billable }}
+            </label>
+        </div>
+
+        <label class="form-control">
+            <div class="label"><span class="label-text">Notes</span></div>
+            {{ form.notes }}
+        </label>
+    </div>
+
+    <div class="mt-4 flex gap-2">
+        <button class="btn btn-primary">Save</button>
+        <button type="button" class="btn" onclick="document.getElementById('entry-modal').close()">Cancel</button>
+    </div>
+
+    {% if form.errors %}
+    <div class="alert alert-error mt-3">
+        {{ form.errors }}
+    </div>
+    {% endif %}
+</form>

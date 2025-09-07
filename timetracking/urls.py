@@ -1,30 +1,23 @@
 from django.urls import path
-
 from .views import (
-    ProjectListCreateView, ProjectUpdateView,
-    TaskListCreateView, TaskUpdateView,
-    EntryListView, EntryCreateView, EntryUpdateView, EntryDeleteView,
-    weekly_report, weekly_report_csv,
+    TimeEntryView, EntriesFragmentView, EntryEditView,
+    ProjectOptionsView, TaskOptionsView,
+    EntriesRowsView,
+    MetricsHomeView, MetricsSummaryView, MetricsTableView, MetricsTrendView,
 )
 
 app_name = "timetracking"
 
 urlpatterns = [
-    # projects
-    path("projects/", ProjectListCreateView.as_view(), name="project_list"),
-    path("projects/<int:pk>/edit/", ProjectUpdateView.as_view(), name="project_edit"),
-
-    # tasks
-    path("projects/<int:project_id>/tasks/", TaskListCreateView.as_view(), name="task_list"),
-    path("tasks/<int:pk>/edit/", TaskUpdateView.as_view(), name="task_edit"),
-
-    # entries
-    path("entries/", EntryListView.as_view(), name="entry_list"),
-    path("entries/new/", EntryCreateView.as_view(), name="entry_create"),
-    path("entries/<int:pk>/edit/", EntryUpdateView.as_view(), name="entry_edit"),
-    path("entries/<int:pk>/delete/", EntryDeleteView.as_view(), name="entry_delete"),
-
-    # reports
-    path("reports/weekly/", weekly_report, name="weekly_report"),
-    path("reports/weekly.csv", weekly_report_csv, name="weekly_report_csv"),
+    path("time/", TimeEntryView.as_view(), name="home"),
+    path("time/entries/fragment/", EntriesFragmentView.as_view(), name="entries_fragment"),
+    path("time/entries/rows/", EntriesRowsView.as_view(), name="entries_rows"),
+    path("time/entry/<int:pk>/edit/", EntryEditView.as_view(), name="entry_edit"),
+    path("time/options/projects/", ProjectOptionsView.as_view(), name="project_options"),
+    path("time/options/tasks/", TaskOptionsView.as_view(), name="task_options"),
+    # --- METRICS ---
+    path("time/metrics/", MetricsHomeView.as_view(), name="metrics_home"),
+    path("time/metrics/summary/", MetricsSummaryView.as_view(), name="metrics_summary"),
+    path("time/metrics/table/<str:kind>/", MetricsTableView.as_view(), name="metrics_table"),
+    path("time/metrics/trend/", MetricsTrendView.as_view(), name="metrics_trend"),
 ]

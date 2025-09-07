@@ -1,0 +1,6 @@
+<option value="">— Select a task —</option>
+{% for t in tasks %}
+<option value="{{ t.id }}">
+    {{ t.title }}{% if not t.is_active %} (inactive){% endif %}
+</option>
+{% endfor %}

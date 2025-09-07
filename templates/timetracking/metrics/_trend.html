@@ -1,0 +1,49 @@
+<div id="metrics-trend" class="card bg-base-100 shadow" hx-get="{% url 'timetracking:metrics_trend' %}"
+    hx-include="#metrics-filters" hx-trigger="change from:#metrics-filters input, change from:#metrics-filters select"
+    hx-target="#metrics-trend" hx-swap="outerHTML" hx-sync="this:queue">
+
+    <div class="card-body">
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="card-title text-lg">Trend ({{ interval|title }})</h3>
+            <div class="text-sm opacity-70">{{ from }} → {{ to }}</div>
+        </div>
+
+        <!-- Spark bars -->
+        <div class="h-16 w-full flex items-end gap-[2px]">
+            {% if series_len %}
+            {% for h in series_pct %}
+            <span class="w-2 bg-primary rounded-t" style="height: {{ h }}%"></span>
+            {% endfor %}
+            {% else %}
+            <div class="text-sm opacity-70">No data in range.</div>
+            {% endif %}
+        </div>
+
+        <div class="overflow-x-auto mt-4">
+            <table class="table table-sm table-zebra">
+                <thead>
+                    <tr>
+                        <th>Period</th>
+                        <th class="text-right">Hours</th>
+                        <th class="text-right">Billable</th>
+                        <th class="text-right">Entries</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td class="whitespace-nowrap">{{ r.period }}</td>
+                        <td class="text-right tabular-nums">{{ r.hours|floatformat:2 }}</td>
+                        <td class="text-right tabular-nums">{{ r.billable|floatformat:2 }}</td>
+                        <td class="text-right tabular-nums">{{ r.entries }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="opacity-70">No rows.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

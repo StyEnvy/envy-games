@@ -1,0 +1,51 @@
+<div id="metrics-summary" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4"
+    hx-get="{% url 'timetracking:metrics_summary' %}" hx-include="#metrics-filters"
+    hx-trigger="change from:#metrics-filters input, change from:#metrics-filters select" hx-target="#metrics-summary"
+    hx-swap="outerHTML" hx-sync="this:queue">
+
+    <div class="stat bg-base-100 shadow rounded-box">
+        <div class="stat-title">Total Hours</div>
+        <div class="stat-value text-primary">{{ k_total_hours|floatformat:2 }}</div>
+        <div class="stat-desc">Across {{ k_entries }} entries</div>
+    </div>
+
+    <div class="stat bg-base-100 shadow rounded-box">
+        <div class="stat-title">Billable</div>
+        <div class="stat-value">{{ k_billable_hours|floatformat:2 }}</div>
+        <div class="stat-desc">Utilization {{ k_util|floatformat:0 }}&#37;</div>
+    </div>
+
+    <div class="stat bg-base-100 shadow rounded-box">
+        <div class="stat-title">Non-billable</div>
+        <div class="stat-value">{{ k_nonbillable_hours|floatformat:2 }}</div>
+        <div class="stat-desc">Avg/day {{ k_avg_day|floatformat:2 }}</div>
+    </div>
+
+    <div class="stat bg-base-100 shadow rounded-box">
+        <div class="stat-title">Active Days</div>
+        <div class="stat-value">{{ k_days }}</div>
+        <div class="stat-desc">
+            {% if first_date and last_date %}{{ first_date }} → {{ last_date }}{% else %}—{% endif %}
+        </div>
+    </div>
+
+    <div class="stat bg-base-100 shadow rounded-box">
+        <div class="stat-title">Top Project</div>
+        <div class="stat-value text-sm truncate">
+            {% if top_project %}
+            <button class="link link-hover text-left" onclick="egSetProjectAndRefresh({{ top_project.project_id }})">
+                {{ top_project.project__title }}
+            </button>
+            {% else %}—{% endif %}
+        </div>
+        <div class="stat-desc">By total time</div>
+    </div>
+
+    <div class="stat bg-base-100 shadow rounded-box">
+        <div class="stat-title">Top Task</div>
+        <div class="stat-value text-sm truncate">
+            {% if top_task %}{{ top_task.task__title }}{% else %}—{% endif %}
+        </div>
+        <div class="stat-desc">By total time</div>
+    </div>
+</div>

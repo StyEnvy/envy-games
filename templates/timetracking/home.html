@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Time Entry — Envy Games{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-6xl">
+
+    <!-- Config for JS (typeahead + fragments) -->
+    <div id="tt-config" data-project-options-url="{% url 'timetracking:project_options' %}"
+        data-task-options-url="{% url 'timetracking:task_options' %}"
+        data-entries-fragment-url="{% url 'timetracking:entries_fragment' %}"></div>
+
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="breadcrumbs text-sm mb-2">
+            <ul>
+                <li><a href="{% url 'dashboard:home' %}">Dashboard</a></li>
+                <li>Time Tracking</li>
+            </ul>
+        </div>
+
+        <div class="flex items-start justify-between gap-3">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold">Time Entry</h1>
+                <p class="opacity-70 text-sm mt-1">
+                    Pick a project and task, enter how long you worked, and save. That’s it.
+                </p>
+
+                <!-- Signed-in user & role -->
+                <div class="mt-2 flex items-center gap-2">
+                    <span class="badge badge-neutral" title="User">
+                        {{ user_display_name }}
+                    </span>
+                    {% if user_role_display %}
+                    <span class="badge badge-outline" title="Role">
+                        {{ user_role_display }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- PM-only metrics button -->
+            {% if can_view_metrics %}
+            <a href="{% url 'timetracking:metrics_home' %}" class="btn btn-sm btn-outline mt-1"
+                aria-label="Go to Time Metrics">
+                View Metrics
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="mb-4 space-y-2">
+        {% for message in messages %}
+        <div
+            class="alert {% if 'error' in message.tags %}alert-error{% elif 'warning' in message.tags %}alert-warning{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %}">
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Time Entry Form -->
+        <div class="card bg-base-100 shadow">
+            <div class="card-body">
+                <h2 class="card-title mb-2">Record Time</h2>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-error mb-3">
+                        <ul class="list-disc list-inside">
+                            {% for err in form.non_field_errors %}<li>{{ err }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <!-- Project -->
+                        <label class="form-control w-full">
+                            <div class="label">
+                                <span class="label-text">Project</span>
+                                <input id="project-search" type="search" placeholder="Search projects…"
+                                    class="input input-bordered input-sm ml-auto w-48" />
+                            </div>
+                            {{ form.project }}
+                            {% if form.project.errors %}
+                            <span class="label-text-alt text-error mt-1">{{ form.project.errors|striptags }}</span>
+                            {% endif %}
+                        </label>
+
+                        <!-- Task -->
+                        <label class="form-control w-full">
+                            <div class="label">
+                                <span class="label-text">Task</span>
+                                <input id="task-search" type="search" placeholder="Search tasks…"
+                                    class="input input-bordered input-sm ml-auto w-48" />
+                            </div>
+                            {{ form.task }}
+                            {% if not selected_project_id %}
+                            <p class="text-xs opacity-70 mt-1">Choose a project first to load its tasks.</p>
+                            {% endif %}
+                            {% if form.task.errors %}
+                            <span class="label-text-alt text-error mt-1">{{ form.task.errors|striptags }}</span>
+                            {% endif %}
+                        </label>
+
+                        <!-- Date + Duration + Billable -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <label class="form-control">
+                                <div class="label"><span class="label-text">Date</span></div>
+                                {{ form.work_date }}
+                                {% if form.work_date.errors %}
+                                <span class="label-text-alt text-error mt-1">{{ form.work_date.errors|striptags
+                                    }}</span>
+                                {% endif %}
+                            </label>
+
+                            <label class="form-control">
+                                <div class="label"><span class="label-text">Duration</span></div>
+                                {{ form.duration }}
+                                <div class="label">
+                                    <span class="label-text-alt opacity-70">
+                                        Minutes or H:MM (e.g., <code>90</code> or <code>1:30</code>)
+                                    </span>
+                                </div>
+                                {% if form.duration.errors %}
+                                <span class="label-text-alt text-error mt-1">{{ form.duration.errors|striptags }}</span>
+                                {% endif %}
+                            </label>
+
+                            <label class="form-control">
+                                <div class="label"><span class="label-text">Billable</span></div>
+                                <div class="flex items-center h-10">
+                                    <label class="label cursor-pointer gap-3">
+                                        {{ form.billable }}
+                                        <span class="label-text">Yes</span>
+                                    </label>
+                                </div>
+                                {% if form.billable.errors %}
+                                <span class="label-text-alt text-error mt-1">{{ form.billable.errors|striptags }}</span>
+                                {% endif %}
+                            </label>
+                        </div>
+
+                        <!-- Notes -->
+                        <label class="form-control">
+                            <div class="label"><span class="label-text">Notes</span></div>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                            <span class="label-text-alt text-error mt-1">{{ form.notes.errors|striptags }}</span>
+                            {% endif %}
+                        </label>
+                    </div>
+
+                    <div class="mt-5 flex items-center gap-3">
+                        <button type="submit" class="btn btn-primary">Record time</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Entries panel: loaded via HTMX on first paint -->
+        <div id="entries-panel" class="card bg-base-100 shadow" hx-get="{% url 'timetracking:entries_fragment' %}"
+            hx-trigger="load" hx-target="#entries-panel" hx-swap="outerHTML"
+            hx-on::afterSwap="document.body.dispatchEvent(new Event('entriesChanged'))">
+            <!-- lightweight skeleton while loading -->
+            <div class="card-body">
+                <div class="flex items-center justify-between gap-3 mb-2">
+                    <h2 class="card-title">Entries</h2>
+                    <div class="skeleton h-8 w-64"></div>
+                </div>
+                <div class="skeleton h-8 mb-2"></div>
+                <div class="skeleton h-8 mb-2"></div>
+                <div class="skeleton h-8 mb-2"></div>
+            </div>
+        </div>
+
+        <!-- Invisible listener to refresh the entries panel after an edit -->
+        <div hidden hx-get="{% url 'timetracking:entries_fragment' %}" hx-trigger="entriesChanged from:body"
+            hx-target="#entries-panel" hx-swap="outerHTML"></div>
+
+        <!-- Modal -->
+        <dialog id="entry-modal" class="modal">
+            <div class="modal-box w-11/12 max-w-2xl" id="entry-modal-content"></div>
+            <form method="dialog" class="modal-backdrop">
+                <button>close</button>
+            </form>
+        </dialog>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'js/time_home.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,6 @@
+<option value="">— Select a project —</option>
+{% for p in projects %}
+<option value="{{ p.id }}">
+    {{ p.title }}{% if not p.is_active %} (inactive){% endif %}
+</option>
+{% endfor %}

@@ -1,0 +1,44 @@
+<div id="entries-panel" class="card bg-base-100 shadow">
+    <div class="card-body">
+        <div class="flex items-center justify-between gap-3 mb-2">
+            <h2 class="card-title">Entries</h2>
+            <input id="entries-search" type="search" placeholder="Search date / project / task…"
+                class="input input-bordered input-sm w-64" />
+        </div>
+
+        {% if entries %}
+        <div class="overflow-x-auto">
+            <table class="table table-zebra" id="entries-table">
+                <thead>
+                    <tr>
+                        <th class="w-28">Date</th>
+                        <th>Project / Task</th>
+                        <th class="w-24 text-right">Minutes</th>
+                        <th class="w-20 text-center">Billable</th>
+                        <th class="w-16"></th>
+                    </tr>
+                </thead>
+                <tbody id="entries-tbody">
+                    {% include "timetracking/partials/entries_rows.html" with entries=entries %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Load more -->
+        <div class="mt-3 flex items-center justify-center">
+            {% if page_obj.has_next %}
+            <button class="btn btn-sm btn-ghost"
+                hx-get="{% url 'timetracking:entries_rows' %}?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if project_id %}&project={{ project_id }}{% endif %}{% if dt_from %}&from={{ dt_from }}{% endif %}{% if dt_to %}&to={{ dt_to }}{% endif %}"
+                hx-target="#entries-tbody" hx-swap="beforeend" hx-indicator="#entries-loading">
+                Load more
+            </button>
+            {% else %}
+            <div class="text-center opacity-60 text-sm">No more entries.</div>
+            {% endif %}
+            <div id="entries-loading" class="htmx-indicator ml-3 opacity-60 text-sm">Loading…</div>
+        </div>
+        {% else %}
+        <p class="opacity-70">No entries yet. Record your first one on the left.</p>
+        {% endif %}
+    </div>
+</div>

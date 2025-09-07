@@ -1,0 +1,22 @@
+{% for e in entries %}
+<tr data-row>
+    <td class="col-date">{{ e.work_date }}</td>
+    <td class="col-pt">
+        <div class="font-medium">{{ e.project.title }}</div>
+        <div class="text-sm opacity-70">{{ e.task.title }}</div>
+        {% if e.notes %}<div class="hidden notes">{{ e.notes }}</div>{% endif %}
+    </td>
+    <td class="text-right">{{ e.duration_minutes }}</td>
+    <td class="text-center">
+        {% if e.billable %}
+        <span class="badge badge-success badge-sm">Yes</span>
+        {% else %}
+        <span class="badge badge-ghost badge-sm">No</span>
+        {% endif %}
+    </td>
+    <td class="text-right">
+        <button class="btn btn-xs btn-outline entry-edit-btn"
+            data-edit-url="{% url 'timetracking:entry_edit' e.id %}">Edit</button>
+    </td>
+</tr>
+{% endfor %}

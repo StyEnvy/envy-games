@@ -1,0 +1,118 @@
+{# tasks table: no elif/else anywhere #}
+<div id="metrics-table-{{ kind }}" class="card bg-base-100 shadow" hx-get="{% url 'timetracking:metrics_table' kind %}"
+    hx-include="#metrics-filters, #mt-controls-{{ kind }}"
+    hx-trigger="change from:#metrics-filters input, change from:#metrics-filters select, keyup changed delay:300ms from:#mt-controls-{{ kind }} input, change from:#mt-controls-{{ kind }} select, submit from:#mt-controls-{{ kind }}"
+    hx-target="#metrics-table-{{ kind }}" hx-swap="outerHTML" hx-sync="this:queue">
+    <div class="card-body">
+        <div class="flex items-center justify-between gap-3">
+            <h3 class="card-title text-lg">{{ title }}</h3>
+
+            <form id="mt-controls-{{ kind }}" class="flex items-center gap-2" onsubmit="return false;">
+                <input type="text" name="q" value="{{ q|default:'' }}" placeholder="Search"
+                    class="input input-sm input-bordered w-40" aria-label="Search rows" />
+                <select name="top" class="select select-sm select-bordered" aria-label="Top N">
+                    {% for o in top_options %}
+                    <option value="{{ o.value }}" {% if o.selected %} selected{% endif %}>{{ o.label }}</option>
+                    {% endfor %}
+                </select>
+                <input type="hidden" name="sort" value="{{ sort|default:'-hours' }}">
+            </form>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th class="whitespace-nowrap">
+                            <a class="link link-hover" hx-get="{% url 'timetracking:metrics_table' kind %}"
+                                hx-target="#metrics-table-{{ kind }}" hx-swap="outerHTML"
+                                hx-include="#metrics-filters, #mt-controls-{{ kind }}"
+                                hx-vals='{"sort":"{{ sort_states.task.next }}"}' aria-label="Sort by Task">
+                                Task
+                                {% if sort_states.task.dir == 'asc' %}▲{% endif %}
+                                {% if sort_states.task.dir == 'desc' %}▼{% endif %}
+                            </a>
+                        </th>
+                        <th class="whitespace-nowrap">
+                            <a class="link link-hover" hx-get="{% url 'timetracking:metrics_table' kind %}"
+                                hx-target="#metrics-table-{{ kind }}" hx-swap="outerHTML"
+                                hx-include="#metrics-filters, #mt-controls-{{ kind }}"
+                                hx-vals='{"sort":"{{ sort_states.project.next }}"}' aria-label="Sort by Project">
+                                Project
+                                {% if sort_states.project.dir == 'asc' %}▲{% endif %}
+                                {% if sort_states.project.dir == 'desc' %}▼{% endif %}
+                            </a>
+                        </th>
+                        <th class="text-right whitespace-nowrap">
+                            <a class="link link-hover" hx-get="{% url 'timetracking:metrics_table' kind %}"
+                                hx-target="#metrics-table-{{ kind }}" hx-swap="outerHTML"
+                                hx-include="#metrics-filters, #mt-controls-{{ kind }}"
+                                hx-vals='{"sort":"{{ sort_states.hours.next }}"}' aria-label="Sort by Hours">
+                                Hours
+                                {% if sort_states.hours.dir == 'asc' %}▲{% endif %}
+                                {% if sort_states.hours.dir == 'desc' %}▼{% endif %}
+                            </a>
+                        </th>
+                        <th class="text-right whitespace-nowrap">
+                            <a class="link link-hover" hx-get="{% url 'timetracking:metrics_table' kind %}"
+                                hx-target="#metrics-table-{{ kind }}" hx-swap="outerHTML"
+                                hx-include="#metrics-filters, #mt-controls-{{ kind }}"
+                                hx-vals='{"sort":"{{ sort_states.billable.next }}"}' aria-label="Sort by Billable">
+                                Billable
+                                {% if sort_states.billable.dir == 'asc' %}▲{% endif %}
+                                {% if sort_states.billable.dir == 'desc' %}▼{% endif %}
+                            </a>
+                        </th>
+                        <th class="text-right whitespace-nowrap">
+                            <a class="link link-hover" hx-get="{% url 'timetracking:metrics_table' kind %}"
+                                hx-target="#metrics-table-{{ kind }}" hx-swap="outerHTML"
+                                hx-include="#metrics-filters, #mt-controls-{{ kind }}"
+                                hx-vals='{"sort":"{{ sort_states.entries.next }}"}' aria-label="Sort by Entries">
+                                Entries
+                                {% if sort_states.entries.dir == 'asc' %}▲{% endif %}
+                                {% if sort_states.entries.dir == 'desc' %}▼{% endif %}
+                            </a>
+                        </th>
+                        <th class="whitespace-nowrap">
+                            <a class="link link-hover" hx-get="{% url 'timetracking:metrics_table' kind %}"
+                                hx-target="#metrics-table-{{ kind }}" hx-swap="outerHTML"
+                                hx-include="#metrics-filters, #mt-controls-{{ kind }}"
+                                hx-vals='{"sort":"{{ sort_states.first.next }}"}' aria-label="Sort by First">
+                                First
+                                {% if sort_states.first.dir == 'asc' %}▲{% endif %}
+                                {% if sort_states.first.dir == 'desc' %}▼{% endif %}
+                            </a>
+                        </th>
+                        <th class="whitespace-nowrap">
+                            <a class="link link-hover" hx-get="{% url 'timetracking:metrics_table' kind %}"
+                                hx-target="#metrics-table-{{ kind }}" hx-swap="outerHTML"
+                                hx-include="#metrics-filters, #mt-controls-{{ kind }}"
+                                hx-vals='{"sort":"{{ sort_states.last.next }}"}' aria-label="Sort by Last">
+                                Last
+                                {% if sort_states.last.dir == 'asc' %}▲{% endif %}
+                                {% if sort_states.last.dir == 'desc' %}▼{% endif %}
+                            </a>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td class="whitespace-nowrap">{{ r.label }}</td>
+                        <td class="whitespace-nowrap opacity-80">{{ r.project }}</td>
+                        <td class="text-right tabular-nums">{{ r.hours }}</td>
+                        <td class="text-right tabular-nums">{{ r.billable }}</td>
+                        <td class="text-right tabular-nums">{{ r.entries }}</td>
+                        <td class="whitespace-nowrap text-xs opacity-70">{{ r.first|default_if_none:"—" }}</td>
+                        <td class="whitespace-nowrap text-xs opacity-70">{{ r.last|default_if_none:"—" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="opacity-70">No rows.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
