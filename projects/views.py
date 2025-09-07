@@ -12,7 +12,8 @@ from django.db.models import Q, Count, Prefetch, Max
 import logging
 
 from .forms import ProjectForm, TaskForm, QuickTaskForm, AddMemberForm
-from .models import Project, Board, Column, Task, Attachment, ProjectMembership, POSITION_STEP
+from .models import Project, Board, Column, Task, ProjectMembership 
+from .utils import POSITION_STEP
 
 from accounts.models import UserRole
 from accounts.views import RoleRequiredMixin, role_required, user_has_role
@@ -33,43 +34,93 @@ def _task_card_template(task: Task) -> str:
 # --- Lists / detail --------------------------------------------------------
 
 class ProjectListView(LoginRequiredMixin, ListView):
-    """Shows all projects (filterable by status, project_type; searchable)"""
+    """Shows projects (filterable by status/type; searchable). 'All' excludes hold/completed/archived."""
     model = Project
     template_name = "projects/project_list.html"
     context_object_name = "projects"
     paginate_by = 12
 
+    # Hidden from the "All" view
+    HIDDEN_IN_ALL = {"hold", "completed", "archived"}
+
+    def get_paginate_by(self, queryset):
+        # Allow ?per=12|24|48|96 (clamped)
+        try:
+            per = int(self.request.GET.get("per", 12))
+        except (TypeError, ValueError):
+            per = 12
+        return max(6, min(per, 96))
+
     def get_queryset(self):
-        # Optimized with select_related for creator/profile
         qs = Project.objects.select_related("created_by", "created_by__profile")
 
-        # status filter (?status=planning|active|hold|completed|archived|all)
+        # Status filter
         status = (self.request.GET.get("status") or "").strip()
-        if status and status != "all" and status in dict(Project.STATUS_CHOICES):
+        valid_statuses = dict(Project.STATUS_CHOICES).keys()
+        if status and status != "all" and status in valid_statuses:
             qs = qs.filter(status=status)
+        else:
+            # Default "All" view hides on-hold/completed/archived
+            qs = qs.exclude(status__in=self.HIDDEN_IN_ALL)
 
-        # project_type filter; accept either ?type=... or ?project_type=...
+        # Type filter
         ptype = (self.request.GET.get("type") or self.request.GET.get("project_type") or "").strip()
         if ptype and ptype != "all" and ptype in dict(Project.PROJECT_TYPE_CHOICES):
             qs = qs.filter(project_type=ptype)
 
-        # search - sanitized
+        # Search
         q = (self.request.GET.get("q") or "").strip()[:100]
         if q:
             qs = qs.filter(Q(title__icontains=q) | Q(description__icontains=q))
 
-        return qs.order_by("-created_at")
+        # Sorting
+        sort = (self.request.GET.get("sort") or "new").strip()
+        order_map = {
+            "new": "-created_at",
+            "old": "created_at",
+            "title": "title",
+            "title_desc": "-title",
+        }
+        order_field = order_map.get(sort, "-created_at")
+        return qs.order_by(order_field, "-created_at", "title")
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx["current_status"] = self.request.GET.get("status", "all")
-        ctx["current_type"] = (self.request.GET.get("type") or self.request.GET.get("project_type") or "all")
-        ctx["current_q"] = (self.request.GET.get("q") or "")[:100]
+
+        # sanitize inputs
+        status = self.request.GET.get("status", "all")
+        ptype = (self.request.GET.get("type") or self.request.GET.get("project_type") or "all")
+        q = (self.request.GET.get("q") or "")[:100]
+        sort = (self.request.GET.get("sort") or "new")
+        if sort not in {"new", "old", "title", "title_desc"}:
+            sort = "new"
+        try:
+            per = int(self.request.GET.get("per", 12))
+        except (TypeError, ValueError):
+            per = 12
+        per = max(6, min(per, 96))
+
+        ctx["current_status"] = status
+        ctx["current_type"] = ptype
+        ctx["current_q"] = q
+        ctx["current_sort"] = sort
+        ctx["current_per"] = per
         ctx["status_choices"] = Project.STATUS_CHOICES
         ctx["type_choices"] = Project.PROJECT_TYPE_CHOICES
         ctx["is_manager"] = is_pm(self.request.user)
-        return ctx
 
+        # boolean flags to avoid comparisons in templates
+        ctx["sort_is_new"] = sort == "new"
+        ctx["sort_is_old"] = sort == "old"
+        ctx["sort_is_title"] = sort == "title"
+        ctx["sort_is_title_desc"] = sort == "title_desc"
+
+        ctx["per_is_12"] = per == 12
+        ctx["per_is_24"] = per == 24
+        ctx["per_is_48"] = per == 48
+        ctx["per_is_96"] = per == 96
+
+        return ctx
 
 class ProjectListMineView(ProjectListView):
     """Only projects created by me."""
@@ -178,10 +229,13 @@ class ProjectUpdateView(RoleRequiredMixin, UpdateView):
 
 # --- Boards ---------------------------------------------------------------
 
-@login_required
-def board_view(request, slug):
-    """Interactive Tasks board with drag-drop"""
-    project = get_object_or_404(Project.objects.select_related("created_by"), slug=slug)
+def _board_view_generic(request, slug, board_type):
+    """Generic board view handler for both tasks and roadmap boards"""
+    project = get_object_or_404(
+        Project.objects.select_related("created_by", "created_by__profile"),
+        slug=slug
+    )
+    
     board = get_object_or_404(
         Board.objects.prefetch_related(
             Prefetch(
@@ -189,16 +243,23 @@ def board_view(request, slug):
                 queryset=Column.objects.prefetch_related(
                     Prefetch(
                         "tasks",
-                        queryset=Task.objects.select_related("assignee", "assignee__profile")
-                        .prefetch_related("attachments")
-                        .order_by("position"),
+                        queryset=Task.objects.select_related(
+                            "assignee", "assignee__profile", "created_by"
+                        ).order_by("position"),
                     )
+                ).annotate(
+                    task_count=Count('tasks')  # Add this annotation
                 ).order_by("position"),
             )
         ),
         project=project,
-        board_type="tasks",
+        board_type=board_type,
     )
+
+    template_map = {
+        "tasks": "projects/board.html",
+        "roadmap": "projects/roadmap.html",
+    }
 
     context = {
         "project": project,
@@ -207,39 +268,19 @@ def board_view(request, slug):
         "is_manager": is_pm(request.user),
         "project_type_display": project.get_project_type_display(),
     }
-    return render(request, "projects/board.html", context)
+    
+    return render(request, template_map[board_type], context)
+
+@login_required
+def board_view(request, slug):
+    """Interactive Tasks board with drag-drop"""
+    return _board_view_generic(request, slug, "tasks")
 
 
 @login_required
 def roadmap_view(request, slug):
     """Roadmap board"""
-    project = get_object_or_404(Project.objects.select_related("created_by"), slug=slug)
-    board = get_object_or_404(
-        Board.objects.prefetch_related(
-            Prefetch(
-                "columns",
-                queryset=Column.objects.prefetch_related(
-                    Prefetch(
-                        "tasks",
-                        queryset=Task.objects.select_related("assignee", "assignee__profile")
-                        .prefetch_related("attachments")
-                        .order_by("position"),
-                    )
-                ).order_by("position"),
-            )
-        ),
-        project=project,
-        board_type="roadmap",
-    )
-
-    context = {
-        "project": project,
-        "board": board,
-        "columns": board.columns.all(),
-        "is_manager": is_pm(request.user),
-        "project_type_display": project.get_project_type_display(),
-    }
-    return render(request, "projects/roadmap.html", context)
+    return _board_view_generic(request, slug, "roadmap")
 
 
 # --- HTMX: tasks ----------------------------------------------------------
@@ -249,8 +290,11 @@ def roadmap_view(request, slug):
 def move_task(request, task_id):
     """Handle drag & drop task movement with midpoint positioning + JSON counts."""
     try:
-        # Fetch unlocked for permission check
-        task = get_object_or_404(Task, id=task_id)
+        # Fetch with select_related for optimization
+        task = get_object_or_404(
+            Task.objects.select_related("column", "project", "assignee"),
+            id=task_id
+        )
 
         is_pm_flag = is_pm(request.user)
         if not is_pm_flag and task.assignee_id != request.user.id:
@@ -289,6 +333,13 @@ def move_task(request, task_id):
             siblings = list(siblings_qs)
             n = len(siblings)
 
+            # Check if we need rebalancing (positions getting too large)
+            if siblings and siblings[-1].position > 1000000:
+                # Rebalance all positions
+                for idx, s in enumerate(siblings):
+                    s.position = (idx + 1) * POSITION_STEP
+                Task.objects.bulk_update(siblings, ["position"])
+
             # Calculate new position
             prev_pos = siblings[new_index - 1].position if 0 <= new_index - 1 < n else None
             next_pos = siblings[new_index].position if new_index < n else None
@@ -298,7 +349,7 @@ def move_task(request, task_id):
             elif prev_pos is not None:
                 task.position = prev_pos + POSITION_STEP
             elif next_pos is not None:
-                task.position = max(0, next_pos - POSITION_STEP)
+                task.position = max(1, next_pos - POSITION_STEP)
             else:
                 task.position = POSITION_STEP
 
@@ -326,7 +377,6 @@ def move_task(request, task_id):
         logger.error(f"Error moving task {task_id}: {str(e)}")
         return JsonResponse({"ok": False, "error": "Internal server error"}, status=500)
 
-
 @login_required
 @role_required(UserRole.PROJECT_MANAGER)
 @require_POST
@@ -340,17 +390,34 @@ def quick_add_task(request, column_id):
 
         form = QuickTaskForm(request.POST)
         if form.is_valid():
-            task = form.save(commit=False)
-            task.project = column.board.project
-            task.column = column
-            task.created_by = request.user
-            task.is_roadmap_item = column.board.board_type == "roadmap"
+            with transaction.atomic():
+                task = form.save(commit=False)
+                task.project = column.board.project
+                task.column = column
+                task.created_by = request.user
+                task.is_roadmap_item = column.board.board_type == "roadmap"
 
-            # Set position to end
-            max_pos = Task.objects.filter(column=column).aggregate(max_pos=Max("position"))["max_pos"] or 0
-            task.position = max_pos + POSITION_STEP
+                # Set position to end
+                max_pos = (
+                    Task.objects.filter(column=column)
+                    .select_for_update()
+                    .aggregate(max_pos=Max("position"))["max_pos"] or 0
+                )
+                task.position = max_pos + POSITION_STEP
+                
+                # Check if rebalancing needed
+                if task.position > 1000000:
+                    from .utils import rebalance_column_positions
+                    rebalance_column_positions(column_id)
+                    task.position = POSITION_STEP  # Will be at the end after rebalance
 
-            task.save()
+                task.save()
+
+            # Fetch with related data for rendering
+            task.refresh_from_db()
+            task = Task.objects.select_related(
+                "assignee", "assignee__profile", "column"
+            ).get(pk=task.pk)
 
             return render(
                 request,
@@ -368,18 +435,28 @@ def quick_add_task(request, column_id):
         logger.error(f"Error adding task to column {column_id}: {str(e)}")
         return HttpResponseBadRequest("Error creating task")
 
-
 @login_required
 @require_http_methods(["GET", "POST"])
 def task_modal(request, task_id):
     """Load/save task edit modal"""
     task = get_object_or_404(
-        Task.objects.select_related("assignee", "project", "column").prefetch_related("attachments"),
+        Task.objects.select_related("assignee", "project", "column", "assignee__profile"),
         id=task_id,
     )
     is_pm_flag = is_pm(request.user)
+    
+    # Check view permissions for GET and POST
+    can_view = is_pm_flag or task.assignee_id == request.user.id
+    if not can_view:
+        # Also check if user is a member of the project
+        is_member = task.project.memberships.filter(
+            user=request.user, is_active=True
+        ).exists()
+        if not is_member:
+            return HttpResponse("Unauthorized", status=403)
 
     if request.method == "POST":
+        # Only PM or assignee can edit
         if not is_pm_flag and task.assignee_id != request.user.id:
             return HttpResponse("Unauthorized", status=403)
 
@@ -405,6 +482,7 @@ def task_modal(request, task_id):
             "form": form,
             "task": task,
             "is_manager": is_pm_flag,
+            "can_edit": is_pm_flag or task.assignee_id == request.user.id,
         },
     )
 
@@ -415,7 +493,10 @@ def task_modal(request, task_id):
 def convert_to_task(request, task_id):
     """Convert roadmap item to task (Project Managers only)"""
     try:
-        task = get_object_or_404(Task, id=task_id)
+        task = get_object_or_404(
+            Task.objects.select_related("project", "column__board"),
+            id=task_id
+        )
 
         if not task.is_roadmap_item:
             return HttpResponseBadRequest("Not a roadmap item")
@@ -427,44 +508,6 @@ def convert_to_task(request, task_id):
     except Exception as e:
         logger.error(f"Error converting task {task_id}: {str(e)}")
         return HttpResponseBadRequest("Conversion failed")
-
-
-@login_required
-@require_POST
-def upload_attachment(request, task_id):
-    """Upload file attachment to task"""
-    try:
-        task = get_object_or_404(Task.objects.select_related("assignee"), id=task_id)
-        is_pm_flag = is_pm(request.user)
-
-        if not is_pm_flag and task.assignee_id != request.user.id:
-            return HttpResponse("Unauthorized", status=403)
-
-        if "file" not in request.FILES:
-            return HttpResponseBadRequest("No file provided")
-
-        uploaded_file = request.FILES["file"]
-
-        # Basic file validation (10MB)
-        if uploaded_file.size > 10 * 1024 * 1024:
-            return HttpResponseBadRequest("File too large (max 10MB)")
-
-        Attachment.objects.create(task=task, file=uploaded_file, uploaded_by=request.user)
-
-        task.refresh_from_db()
-        return render(
-            request,
-            _task_card_template(task),
-            {
-                "task": task,
-                "is_manager": is_pm_flag,
-                "column": task.column,
-            },
-        )
-
-    except Exception as e:
-        logger.error(f"Error uploading attachment for task {task_id}: {str(e)}")
-        return HttpResponseBadRequest("Upload failed")
 
 
 # --- Members ---------------------------------------------------------------

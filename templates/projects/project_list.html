@@ -16,47 +16,82 @@
         {% endif %}
     </div>
 
-    <!-- Search -->
+    <!-- Search + Sort + Page Size -->
     <div class="flex flex-wrap gap-4 mb-6">
-        <form method="get" class="flex gap-2 flex-1">
+        <form method="get" class="flex gap-2 flex-1 items-center" data-filter-form>
             <input type="hidden" name="status" value="{{ current_status }}">
             <input type="hidden" name="type" value="{{ current_type }}">
+
             <input type="text" name="q" value="{{ current_q }}" placeholder="Search projects..."
                 class="input input-bordered flex-1 max-w-md">
-            <button type="submit" class="btn btn-ghost">
+
+            <select name="sort" class="select select-bordered">
+                <option value="new" {% if sort_is_new %}selected{% endif %}>Newest</option>
+                <option value="old" {% if sort_is_old %}selected{% endif %}>Oldest</option>
+                <option value="title" {% if sort_is_title %}selected{% endif %}>Title A–Z</option>
+                <option value="title_desc" {% if sort_is_title_desc %}selected{% endif %}>Title Z–A</option>
+            </select>
+
+            <select name="per" class="select select-bordered">
+                <option value="12" {% if per_is_12 %}selected{% endif %}>12 / page</option>
+                <option value="24" {% if per_is_24 %}selected{% endif %}>24 / page</option>
+                <option value="48" {% if per_is_48 %}selected{% endif %}>48 / page</option>
+                <option value="96" {% if per_is_96 %}selected{% endif %}>96 / page</option>
+            </select>
+
+            <button type="submit" class="btn btn-ghost" aria-label="Search">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
             </button>
+
+            {% if current_q %}
+            <a href="{% url 'projects:list' %}?status={{ current_status }}&type={{ current_type }}&sort={{ current_sort }}&per={{ current_per }}"
+                class="btn btn-ghost">
+                Clear
+            </a>
+            {% endif %}
         </form>
     </div>
 
     <!-- Status Filter Tabs -->
-    <div class="tabs tabs-boxed mb-4">
-        <a href="?status=all{% if current_type != 'all' %}&type={{ current_type }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
-            class="tab {% if current_status == 'all' %}tab-active{% endif %}">All</a>
+    <div class="tabs tabs-boxed mb-4" role="tablist">
+        <a href="{% url 'projects:list' %}?status=all&type={{ current_type }}&q={{ current_q }}&sort={{ current_sort }}&per={{ current_per }}"
+            class="tab {% if current_status == 'all' %}tab-active{% endif %}" role="tab"
+            aria-selected="{% if current_status == 'all' %}true{% else %}false{% endif %}">
+            All
+        </a>
         {% for value, label in status_choices %}
-        <a href="?status={{ value }}{% if current_type != 'all' %}&type={{ current_type }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
-            class="tab {% if current_status == value %}tab-active{% endif %}">{{ label }}</a>
+        <a href="{% url 'projects:list' %}?status={{ value }}&type={{ current_type }}&q={{ current_q }}&sort={{ current_sort }}&per={{ current_per }}"
+            class="tab {% if current_status == value %}tab-active{% endif %}" role="tab"
+            aria-selected="{% if current_status == value %}true{% else %}false{% endif %}">
+            {{ label }}
+        </a>
         {% endfor %}
     </div>
 
     <!-- Type Filter Tabs -->
-    <div class="tabs tabs-boxed mb-6">
-        <a href="?type=all{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
-            class="tab {% if current_type == 'all' %}tab-active{% endif %}">All Types</a>
+    <div class="tabs tabs-boxed mb-6" role="tablist">
+        <a href="{% url 'projects:list' %}?type=all&status={{ current_status }}&q={{ current_q }}&sort={{ current_sort }}&per={{ current_per }}"
+            class="tab {% if current_type == 'all' %}tab-active{% endif %}" role="tab"
+            aria-selected="{% if current_type == 'all' %}true{% else %}false{% endif %}">
+            All Types
+        </a>
         {% for value, label in type_choices %}
-        <a href="?type={{ value }}{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
-            class="tab {% if current_type == value %}tab-active{% endif %}">{{ label }}</a>
+        <a href="{% url 'projects:list' %}?type={{ value }}&status={{ current_status }}&q={{ current_q }}&sort={{ current_sort }}&per={{ current_per }}"
+            class="tab {% if current_type == value %}tab-active{% endif %}" role="tab"
+            aria-selected="{% if current_type == value %}true{% else %}false{% endif %}">
+            {{ label }}
+        </a>
         {% endfor %}
     </div>
 
     <!-- Project Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for project in projects %}
-        <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
+        <article class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
             <div class="card-body">
                 <div class="flex justify-between items-start mb-2">
                     <div class="flex items-center gap-2">
@@ -81,7 +116,7 @@
                     <a href="{% url 'projects:detail' project.slug %}" class="btn btn-sm btn-primary">View</a>
                 </div>
             </div>
-        </div>
+        </article>
         {% empty %}
         <div class="col-span-full text-center py-12">
             <p class="text-lg opacity-60">No projects found</p>
@@ -94,21 +129,23 @@
 
     <!-- Pagination -->
     {% if page_obj.has_other_pages %}
-    <div class="flex justify-center mt-8">
+    <nav class="flex justify-center mt-8" aria-label="Pagination">
         <div class="join">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_type != 'all' %}&type={{ current_type }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
-                class="join-item btn">«</a>
+            <a href="{% url 'projects:list' %}?page={{ page_obj.previous_page_number }}&status={{ current_status }}&type={{ current_type }}&q={{ current_q }}&sort={{ current_sort }}&per={{ current_per }}"
+                class="join-item btn" aria-label="Previous page">«</a>
             {% endif %}
 
-            <button class="join-item btn btn-active">Page {{ page_obj.number }}</button>
+            <button class="join-item btn btn-active" aria-current="page">
+                Page {{ page_obj.number }}
+            </button>
 
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if current_status != 'all' %}&status={{ current_status }}{% endif %}{% if current_type != 'all' %}&type={{ current_type }}{% endif %}{% if current_q %}&q={{ current_q }}{% endif %}"
-                class="join-item btn">»</a>
+            <a href="{% url 'projects:list' %}?page={{ page_obj.next_page_number }}&status={{ current_status }}&type={{ current_type }}&q={{ current_q }}&sort={{ current_sort }}&per={{ current_per }}"
+                class="join-item btn" aria-label="Next page">»</a>
             {% endif %}
         </div>
-    </div>
+    </nav>
     {% endif %}
 </div>
 {% endblock %}

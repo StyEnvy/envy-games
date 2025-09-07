@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django.db.models import Count, Q
 
 from .models import (
-    Project, Task, Attachment,
+    Project, Task,
     ProjectMembership,
 )
 
@@ -151,13 +151,3 @@ class TaskAdmin(admin.ModelAdmin):
         }),
     )
     readonly_fields = ['created_at', 'updated_at']
-
-
-@admin.register(Attachment)
-class AttachmentAdmin(admin.ModelAdmin):
-    list_display = ['filename', 'task', 'uploaded_by', 'uploaded_at']
-    list_filter = [('uploaded_at', admin.DateFieldListFilter)]
-    search_fields = ['task__title', 'file']
-    ordering = ['-uploaded_at']
-    list_select_related = ['task', 'uploaded_by']
-    readonly_fields = ['uploaded_at']

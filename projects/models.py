@@ -2,7 +2,7 @@
 from django.db import models, transaction
 from django.db.models import UniqueConstraint
 
-from .utils import unique_slugify, next_position_for_column, POSITION_STEP
+from .utils import unique_slugify, next_position_for_column
 
 class Project(models.Model):
     STATUS_CHOICES = [
@@ -62,8 +62,11 @@ class Project(models.Model):
         # Only handle slug creation/uniqueness here
         if not self.slug:
             self.slug = unique_slugify(self, self.title)
-        else:
-            # Keep slug unique if it was manually edited to conflict
+        elif self.pk is None:
+            # New instance with a manually set slug - ensure uniqueness
+            self.slug = unique_slugify(self, self.slug)
+        # For existing instances, only regenerate if there's a conflict
+        elif Project.objects.filter(slug=self.slug).exclude(pk=self.pk).exists():
             self.slug = unique_slugify(self, self.slug)
         super().save(*args, **kwargs)
 
@@ -72,32 +75,32 @@ class Project(models.Model):
         return reverse("projects:detail", kwargs={"slug": self.slug})
 
     def user_can_view(self, user):
-        if not user.is_authenticated:
+        if not getattr(user, "is_authenticated", False):
             return False
-        # Global roles can always view
+        # Django admin/staff can view
+        if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+            return True
+        # Only PM or Developer may view
         try:
             from accounts.models import UserRole
-            if hasattr(user, "profile") and user.profile.role in {UserRole.PROJECT_MANAGER, getattr(UserRole, "ADMIN", None)}:
-                return True
+            role = getattr(getattr(user, "profile", None), "role", None)
+            return role in (UserRole.PROJECT_MANAGER, UserRole.DEVELOPER)
         except Exception:
-            pass
-        # Creator can view
-        if self.created_by_id == getattr(user, "id", None):
-            return True
-        # Active member can view
-        return self.memberships.filter(user=user, is_active=True).exists()
+            return False
 
     def user_can_edit(self, user):
-        if not user.is_authenticated:
+        if not getattr(user, "is_authenticated", False):
             return False
+        # Django admin/staff can edit
+        if getattr(user, "is_staff", False) or getattr(user, "is_superuser", False):
+            return True
+        # Only PM may edit (developers cannot)
         try:
             from accounts.models import UserRole
-            if hasattr(user, "profile") and user.profile.role in {UserRole.PROJECT_MANAGER, getattr(UserRole, "ADMIN", None)}:
-                return True
+            role = getattr(getattr(user, "profile", None), "role", None)
+            return role == UserRole.PROJECT_MANAGER
         except Exception:
-            pass
-        # Otherwise allow any active member to edit (no per-project roles)
-        return self.memberships.filter(user=user, is_active=True).exists()
+            return False
 
     def add_member(self, user, role=None, added_by=None):
         """
@@ -240,6 +243,12 @@ class Task(models.Model):
                 violation_error_message="A task already occupies this position in the column.",
             )
         ]
+        indexes = [
+            models.Index(fields=["project", "is_roadmap_item"]),
+            models.Index(fields=["assignee", "project"]),
+            models.Index(fields=["column", "position"]),
+            models.Index(fields=["created_at"]),
+        ]
 
     def __str__(self):
         return self.title
@@ -248,7 +257,24 @@ class Task(models.Model):
         qs = Task.objects.select_for_update().filter(column=self.column)
         return next_position_for_column(qs)
 
+    def clean(self):
+        super().clean()
+        # Auto-align task.project with column.board.project when a column is set
+        if getattr(self, "column_id", None):
+            board = getattr(self.column, "board", None)
+            if board is not None:
+                board_project_id = getattr(board, "project_id", None)
+                if board_project_id and self.project_id != board_project_id:
+                    self.project_id = board_project_id
+
     def save(self, *args, **kwargs):
+        # Ensure project matches the column's board project even when not using ModelForms
+        if getattr(self, "column_id", None):
+            board = getattr(self.column, "board", None)
+            board_project_id = getattr(board, "project_id", None) if board else None
+            if board_project_id and self.project_id != board_project_id:
+                self.project_id = board_project_id
+
         with transaction.atomic():
             if self.position is None:
                 self.position = self._next_position_in_column()
@@ -271,21 +297,3 @@ class Task(models.Model):
         self.position = None
         self.save()
         return True
-
-
-class Attachment(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
-    file = models.FileField(upload_to="task_attachments/%Y/%m/%d/")
-    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ["-uploaded_at"]
-
-    def __str__(self):
-        return f"{self.task.title} - {self.file.name}"
-
-    @property
-    def filename(self):
-        import os
-        return os.path.basename(self.file.name)

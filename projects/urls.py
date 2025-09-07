@@ -27,5 +27,4 @@ urlpatterns = [
     path("htmx/column/<int:column_id>/add-task/", views.quick_add_task, name="quick_add_task"),
     path("htmx/task/<int:task_id>/modal/", views.task_modal, name="task_modal"),
     path("htmx/task/<int:task_id>/convert/", views.convert_to_task, name="convert_to_task"),
-    path("htmx/task/<int:task_id>/upload/", views.upload_attachment, name="upload_attachment"),
 ]

@@ -1,5 +1,6 @@
 from django.db.models import Max
 from django.utils.text import slugify
+from django.db import transaction
 
 SLUG_MAX_TRIES = 50
 POSITION_STEP = 100
@@ -41,3 +42,25 @@ def next_position_for_column(task_queryset) -> int:
     """
     max_pos = task_queryset.aggregate(maxp=Max("position"))["maxp"]
     return (max_pos or 0) + POSITION_STEP
+
+def rebalance_column_positions(column_id):
+    """
+    Rebalance all task positions in a column to prevent overflow.
+    Should be called periodically or when positions get too large.
+    """
+    from .models import Task
+    
+    with transaction.atomic():
+        tasks = list(
+            Task.objects.select_for_update()
+            .filter(column_id=column_id)
+            .order_by("position")
+        )
+        
+        for idx, task in enumerate(tasks):
+            task.position = (idx + 1) * POSITION_STEP
+        
+        if tasks:
+            Task.objects.bulk_update(tasks, ["position"])
+    
+    return len(tasks)

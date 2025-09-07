@@ -76,29 +76,6 @@
                 {% endif %}
             </div>
 
-            {% if task.attachments.count > 0 %}
-            <div class="mb-4">
-                <label class="label">
-                    <span class="label-text">Attachments ({{ task.attachments.count }})</span>
-                </label>
-                <ul class="menu bg-base-200 rounded-box p-2">
-                    {% for attachment in task.attachments.all %}
-                    <li>
-                        <a href="{{ attachment.file.url }}" target="_blank" rel="noopener noreferrer"
-                            class="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-                                stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                            </svg>
-                            {{ attachment.filename|default:attachment.file.name }}
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-
             <div class="modal-action">
                 <button type="button" class="btn" onclick="this.closest('dialog').remove()">Cancel</button>
                 {% if is_manager or task.assignee == request.user %}
@@ -106,30 +83,6 @@
                 {% endif %}
             </div>
         </form>
-
-        {% if is_manager or task.assignee == request.user %}
-        <div class="divider">Attach File</div>
-        <form hx-post="{% url 'projects:upload_attachment' task.id %}" hx-encoding="multipart/form-data"
-            hx-target="[data-task-id='{{ task.id }}']" hx-swap="outerHTML" class="space-y-2">
-            {% csrf_token %}
-            <div class="form-control">
-                <label class="label" for="file-upload-{{ task.id }}">
-                    <span class="label-text">Choose file (max 10MB)</span>
-                </label>
-                <input type="file" id="file-upload-{{ task.id }}" name="file"
-                    class="file-input file-input-bordered w-full"
-                    accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg,.gif,.zip" required />
-                <button type="submit" class="btn btn-sm btn-secondary mt-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
-                    Upload
-                </button>
-            </div>
-        </form>
-        {% endif %}
     </div>
 
     <form method="dialog" class="modal-backdrop">
