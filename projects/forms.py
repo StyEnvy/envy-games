@@ -1,7 +1,8 @@
 from django import forms
 from django.contrib.auth.models import User
 from accounts.models import UserRole
-from .models import Project, Task
+from .models import Project, Task, ProjectLink
+from django.forms import inlineformset_factory
 
 
 class ProjectForm(forms.ModelForm):
@@ -110,3 +111,32 @@ class AddMemberForm(forms.Form):
             )
 
         self.fields["user_id"].queryset = qs.order_by("username")
+
+class ProjectLinkForm(forms.ModelForm):
+    class Meta:
+        ordering = ["position", "id"]
+        model = ProjectLink
+        fields = ["title", "url", "position"]
+        widgets = {
+            "title": forms.TextInput(attrs={
+                "class": "input input-bordered w-full",
+                "placeholder": "Link title (e.g., GitHub, Design Doc, Trello)"
+            }),
+            "url": forms.URLInput(attrs={
+                "class": "input input-bordered w-full",
+                "placeholder": "https://example.com/resource"
+            }),
+            "position": forms.NumberInput(attrs={
+                "class": "input input-bordered w-24",
+                "min": 0
+            }),
+        }
+
+ProjectLinkFormSet = inlineformset_factory(
+    parent_model=Project,
+    model=ProjectLink,
+    form=ProjectLinkForm,
+    fields=["title", "url", "position"],
+    extra=0,             
+    can_delete=True,
+)

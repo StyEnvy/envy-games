@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ action }} Project - Envy Games{% endblock %}
 
 {% block content %}
@@ -35,58 +36,138 @@
                     {% endif %}
                 </div>
 
-                <!-- Version / Status / Project Type -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                     <div class="form-control">
-                        <label class="label">
-                            <span class="label-text">Version</span>
-                        </label>
+                        <label class="label"><span class="label-text">Version</span></label>
                         {{ form.version }}
                         {% if form.version.errors %}
-                        <label class="label">
-                            <span class="label-text-alt text-error">{{ form.version.errors.0 }}</span>
-                        </label>
+                        <label class="label"><span class="label-text-alt text-error">{{ form.version.errors.0
+                                }}</span></label>
                         {% endif %}
                     </div>
-
                     <div class="form-control">
-                        <label class="label">
-                            <span class="label-text">Status</span>
-                        </label>
+                        <label class="label"><span class="label-text">Status</span></label>
                         {{ form.status }}
                         {% if form.status.errors %}
-                        <label class="label">
-                            <span class="label-text-alt text-error">{{ form.status.errors.0 }}</span>
-                        </label>
+                        <label class="label"><span class="label-text-alt text-error">{{ form.status.errors.0
+                                }}</span></label>
                         {% endif %}
                     </div>
-
                     <div class="form-control">
-                        <label class="label">
-                            <span class="label-text">Project Type</span>
-                        </label>
+                        <label class="label"><span class="label-text">Project Type</span></label>
                         {{ form.project_type }}
                         {% if form.project_type.errors %}
-                        <label class="label">
-                            <span class="label-text-alt text-error">{{ form.project_type.errors.0 }}</span>
-                        </label>
+                        <label class="label"><span class="label-text-alt text-error">{{ form.project_type.errors.0
+                                }}</span></label>
                         {% endif %}
                     </div>
                 </div>
 
                 <div class="form-control mb-6">
-                    <label class="label">
-                        <span class="label-text">Description</span>
-                    </label>
+                    <label class="label"><span class="label-text">Description</span></label>
                     {{ form.description }}
                     {% if form.description.errors %}
-                    <label class="label">
-                        <span class="label-text-alt text-error">{{ form.description.errors.0 }}</span>
-                    </label>
+                    <label class="label"><span class="label-text-alt text-error">{{ form.description.errors.0
+                            }}</span></label>
                     {% endif %}
                 </div>
 
-                <div class="card-actions justify-end">
+                <div class="divider">Links</div>
+
+                {{ links_formset.management_form }}
+
+                <div id="links-forms" class="space-y-4">
+                    {% for link_form in links_formset %}
+                    <div class="link-form border rounded-2xl p-4">
+                        {% for hidden in link_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        {% if link_form.DELETE %}
+                        <div class="hidden">
+                            {{ link_form.DELETE }}
+                        </div>
+                        {% endif %}
+
+                        <div class="grid grid-cols-1 md:grid-cols-[2fr,3fr,auto,auto] gap-3 items-end">
+                            <div class="form-control">
+                                <label class="label"><span class="label-text">Link Title</span></label>
+                                {{ link_form.title }}
+                                {% if link_form.title.errors %}
+                                <label class="label"><span class="label-text-alt text-error">{{ link_form.title.errors.0
+                                        }}</span></label>
+                                {% endif %}
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text">URL</span></label>
+                                {{ link_form.url }}
+                                {% if link_form.url.errors %}
+                                <label class="label"><span class="label-text-alt text-error">{{ link_form.url.errors.0
+                                        }}</span></label>
+                                {% endif %}
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text">Position</span></label>
+                                {{ link_form.position }}
+                                {% if link_form.position.errors %}
+                                <label class="label"><span class="label-text-alt text-error">{{
+                                        link_form.position.errors.0 }}</span></label>
+                                {% endif %}
+                            </div>
+                            <div class="flex items-end pb-1">
+                                <button type="button" class="btn btn-ghost btn-sm js-remove-row"
+                                    aria-label="Remove link">
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+
+                        {% if link_form.non_field_errors %}
+                        <div class="col-span-full text-error text-sm mt-2">
+                            {{ link_form.non_field_errors }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-4">
+                    <button type="button" id="add-link-btn" class="btn btn-outline btn-sm">
+                        + Add Link
+                    </button>
+                </div>
+
+                <template id="link-empty-form-template">
+                    {% with link_form=links_formset.empty_form %}
+                    <div class="link-form border rounded-2xl p-4">
+                        {% for hidden in link_form.hidden_fields %}{{ hidden }}{% endfor %}
+                        {% if link_form.DELETE %}
+                        <div class="hidden">
+                            {{ link_form.DELETE }}
+                        </div>
+                        {% endif %}
+                        <div class="grid grid-cols-1 md:grid-cols-[2fr,3fr,auto,auto] gap-3 items-end">
+                            <div class="form-control">
+                                <label class="label"><span class="label-text">Link Title</span></label>
+                                {{ link_form.title }}
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text">URL</span></label>
+                                {{ link_form.url }}
+                            </div>
+                            <div class="form-control">
+                                <label class="label"><span class="label-text">Position</span></label>
+                                {{ link_form.position }}
+                            </div>
+                            <div class="flex items-end pb-1">
+                                <button type="button" class="btn btn-ghost btn-sm js-remove-row"
+                                    aria-label="Remove link">
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endwith %}
+                </template>
+
+                <div class="card-actions justify-end mt-6">
                     <a href="{% url 'projects:list' %}" class="btn btn-ghost">Cancel</a>
                     <button type="submit" class="btn btn-primary">{{ action }} Project</button>
                 </div>
@@ -94,4 +175,7 @@
         </div>
     </div>
 </div>
+
+{# External JS placed at the very end #}
+<script defer src="{% static 'js/links_formset.js' %}"></script>
 {% endblock %}

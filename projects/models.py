@@ -196,7 +196,45 @@ class Column(models.Model):
     def __str__(self):
         return f"{self.board.name} - {self.name}"
 
+class ProjectLink(models.Model):
+    project = models.ForeignKey(
+        Project,
+        on_delete=models.CASCADE,
+        related_name="links",
+    )
+    title = models.CharField(max_length=100)
+    url = models.URLField(max_length=500)
+    position = models.PositiveIntegerField(default=0, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ["position", "id"]
+        indexes = [
+            models.Index(fields=["project", "position"]),
+        ]
+        constraints = [
+            UniqueConstraint(
+                fields=["project", "title"],
+                name="uniq_project_link_title",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.title}"
+
+    def save(self, *args, **kwargs):
+        # auto-place at end if position not set
+        if not self.position:
+            last = (
+                ProjectLink.objects.filter(project=self.project)
+                .order_by("-position")
+                .values_list("position", flat=True)
+                .first()
+            ) or 0
+            self.position = last + 100  # sparse steps like tasks
+        super().save(*args, **kwargs)
+        
 class Task(models.Model):
     TASK_TYPE_CHOICES = [
         ("feature", "Feature"),

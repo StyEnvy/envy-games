@@ -5,8 +5,8 @@ from django.db.models import Count, Q
 from .models import (
     Project, Task,
     ProjectMembership,
+    ProjectLink,
 )
-
 
 class ProjectMembershipInline(admin.TabularInline):
     """Inline admin for managing project members directly from project page"""
@@ -16,7 +16,12 @@ class ProjectMembershipInline(admin.TabularInline):
     readonly_fields = ['joined_at']
     autocomplete_fields = ['user', 'added_by']
 
-
+class ProjectLinkInline(admin.TabularInline):
+    model = ProjectLink
+    extra = 1
+    fields = ["title", "url", "position", "created_at", "updated_at"]
+    readonly_fields = ["created_at", "updated_at"]
+    
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
     list_display = [
@@ -27,7 +32,7 @@ class ProjectAdmin(admin.ModelAdmin):
     search_fields = ['title', 'description']
     prepopulated_fields = {'slug': ('title',)}
     ordering = ['-created_at']
-    inlines = [ProjectMembershipInline]
+    inlines = [ProjectMembershipInline, ProjectLinkInline]
 
     fieldsets = (
         (None, {

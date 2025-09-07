@@ -120,6 +120,28 @@
                 </div>
                 <h2 class="card-title">{{ project.title }}</h2>
                 <p class="line-clamp-2 opacity-80">{{ project.description|default:"No description" }}</p>
+
+                {% with link_slice=project.links.all|slice:":3" %}
+                {% if link_slice %}
+                <div class="flex flex-wrap gap-1 mt-3">
+                    {% for link in link_slice %}
+                    <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer"
+                        class="badge badge-outline gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 3h7m0 0v7m0-7L10 14M5 7v11a3 3 0 003 3h11" />
+                        </svg>
+                        {{ link.title }}
+                    </a>
+                    {% endfor %}
+                    {% if project.links.count > 3 %}
+                    <span class="badge badge-ghost">+{{ project.links.count|add:"-3" }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endwith %}
+
                 <div class="card-actions justify-between items-center mt-4">
                     <div class="text-xs opacity-60">
                         by {{ project.created_by.username }}

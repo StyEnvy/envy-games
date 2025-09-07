@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
@@ -11,7 +11,7 @@ from django.db import transaction
 from django.db.models import Q, Count, Prefetch, Max
 import logging
 
-from .forms import ProjectForm, TaskForm, QuickTaskForm, AddMemberForm
+from .forms import ProjectForm, TaskForm, QuickTaskForm, AddMemberForm, ProjectLinkFormSet
 from .models import Project, Board, Column, Task, ProjectMembership 
 from .utils import POSITION_STEP
 
@@ -202,7 +202,22 @@ class ProjectCreateView(RoleRequiredMixin, CreateView):
         ctx = super().get_context_data(**kwargs)
         ctx["action"] = "Create"
         ctx["type_choices"] = Project.PROJECT_TYPE_CHOICES
+        ctx.setdefault("links_formset", ProjectLinkFormSet(prefix="links"))
         return ctx
+
+    def post(self, request, *args, **kwargs):
+        self.object = None
+        form = self.get_form()
+        links_formset = ProjectLinkFormSet(request.POST, prefix="links")
+        if form.is_valid() and links_formset.is_valid():
+            with transaction.atomic():
+                form.instance.created_by = request.user
+                self.object = form.save()
+                links_formset.instance = self.object
+                links_formset.save()
+            return redirect(self.get_success_url())
+        # invalid -> re-render with errors
+        return self.render_to_response(self.get_context_data(form=form, links_formset=links_formset))
 
 
 class ProjectUpdateView(RoleRequiredMixin, UpdateView):
@@ -219,14 +234,26 @@ class ProjectUpdateView(RoleRequiredMixin, UpdateView):
             qs = qs.filter(created_by=self.request.user)
         return qs
 
-    def get_success_url(self):
-        return reverse_lazy("projects:detail", kwargs={"slug": self.object.slug})
-
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx["action"] = "Edit"
         ctx["type_choices"] = Project.PROJECT_TYPE_CHOICES
+        if self.request.method == "POST":
+            ctx["links_formset"] = ProjectLinkFormSet(self.request.POST, instance=self.object, prefix="links")
+        else:
+            ctx["links_formset"] = ProjectLinkFormSet(instance=self.object, prefix="links")
         return ctx
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
+        links_formset = ProjectLinkFormSet(request.POST, instance=self.object, prefix="links")
+        if form.is_valid() and links_formset.is_valid():
+            with transaction.atomic():
+                self.object = form.save()
+                links_formset.save()
+            return redirect(self.get_success_url())
+        return self.render_to_response(self.get_context_data(form=form, links_formset=links_formset))
 
 
 # --- Boards ---------------------------------------------------------------

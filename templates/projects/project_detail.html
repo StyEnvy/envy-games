@@ -57,6 +57,25 @@
 
             <p class="mb-6 opacity-80">{{ project.description|default:"No description provided" }}</p>
 
+            {% if project.links.exists %}
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-2">Project Links</h3>
+                <div class="flex flex-wrap gap-2">
+                    {% for link in project.links.all %}
+                    <a href="{{ link.url }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">
+                        <!-- external-link icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 3h7m0 0v7m0-7L10 14M5 7v11a3 3 0 003 3h11" />
+                        </svg>
+                        {{ link.title }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Stats -->
             <div class="stats shadow mb-6">
                 <div class="stat">
