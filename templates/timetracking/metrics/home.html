@@ -94,10 +94,10 @@
         </div>
     </form>
 
-    <!-- Summary KPIs (push URL so share link mirrors state) -->
+    <!-- Summary KPIs (no hx-push-url here!) -->
     <div id="metrics-summary" hx-get="{% url 'timetracking:metrics_summary' %}" hx-include="#metrics-filters"
         hx-trigger="load, change from:#metrics-filters input, change from:#metrics-filters select"
-        hx-target="#metrics-summary" hx-swap="outerHTML" hx-sync="this:queue" hx-push-url="true">
+        hx-target="#metrics-summary" hx-swap="outerHTML" hx-sync="this:queue">
         <div class="text-sm opacity-70">Loading summary…</div>
     </div>
 
@@ -135,6 +135,7 @@
 {% block scripts %}
 <script>
     (function () {
+        const HOME_URL = "{% url 'timetracking:metrics_home' %}";
         const form = document.getElementById('metrics-filters');
         const elFrom = document.getElementById('mf-from');
         const elTo = document.getElementById('mf-to');
@@ -167,14 +168,25 @@
             htmx.trigger(form, 'change');
         });
 
+        // Build the current querystring from the filters
         function currentQuery() {
             const data = new FormData(form);
             const q = new URLSearchParams(data);
             return '?' + q.toString();
         }
+
+        // Keep the URL on the full page route, with only query params updated
+        function updateAddressBar() {
+            history.replaceState({}, '', HOME_URL + currentQuery());
+        }
+
+        // Update URL whenever filters change
+        form.addEventListener('change', updateAddressBar);
+
+        // Share link copies the full-page URL (not a fragment)
         btnShare.addEventListener('click', (e) => {
             e.preventDefault();
-            const url = location.pathname + currentQuery();
+            const url = HOME_URL + currentQuery();
             navigator.clipboard.writeText(location.origin + url).then(() => {
                 btnShare.classList.add('btn-success');
                 setTimeout(() => btnShare.classList.remove('btn-success'), 800);
@@ -182,6 +194,7 @@
             history.replaceState({}, '', url);
         });
 
+        // Helper used by summary/table clicks
         window.egSetProjectAndRefresh = function (pid) {
             if (!pid) return;
             elProj.value = String(pid);
