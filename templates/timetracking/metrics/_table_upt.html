@@ -1,0 +1,59 @@
+<div class="card bg-base-100 shadow">
+    <div class="card-body">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="card-title">{{ title }}</h3>
+            <div class="flex items-center gap-2">
+                <form method="get" hx-get="?kind=upt" hx-target="#upt-table" class="flex items-center gap-2">
+                    <input type="hidden" name="sort" value="{{ sort }}">
+                    <select name="top" class="select select-bordered select-sm" onchange="this.form.submit()">
+                        {% for opt in top_options %}
+                        <option value="{{ opt.value }}" {% if opt.selected %} selected{% endif %}>{{ opt.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </form>
+                <input type="text" name="q" value="{{ q }}" class="input input-sm input-bordered"
+                    placeholder="Search user/project/task" hx-get="?kind=upt" hx-trigger="keyup changed delay:300ms"
+                    hx-target="#upt-table">
+            </div>
+        </div>
+
+        <div id="upt-table" class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead>
+                    <tr>
+                        <th><a href="?kind=upt&sort={{ sort_next.user }}">User{{ sort_suffix.user }}</a></th>
+                        <th><a href="?kind=upt&sort={{ sort_next.project }}">Project{{ sort_suffix.project }}</a></th>
+                        <th><a href="?kind=upt&sort={{ sort_next.task }}">Task{{ sort_suffix.task }}</a></th>
+                        <th class="text-right"><a href="?kind=upt&sort={{ sort_next.hours }}">Hours{{ sort_suffix.hours
+                                }}</a></th>
+                        <th class="text-right"><a href="?kind=upt&sort={{ sort_next.billable }}">Billable{{
+                                sort_suffix.billable }}</a></th>
+                        <th class="text-right"><a href="?kind=upt&sort={{ sort_next.entries }}">Entries{{
+                                sort_suffix.entries }}</a></th>
+                        <th><a href="?kind=upt&sort={{ sort_next.first }}">First{{ sort_suffix.first }}</a></th>
+                        <th><a href="?kind=upt&sort={{ sort_next.last }}">Last{{ sort_suffix.last }}</a></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td>{{ r.user }}</td>
+                        <td>{{ r.project }}</td>
+                        <td>{{ r.task }}</td>
+                        <td class="text-right">{{ r.hours }}</td>
+                        <td class="text-right">{{ r.billable }}</td>
+                        <td class="text-right">{{ r.entries }}</td>
+                        <td>{{ r.first }}</td>
+                        <td>{{ r.last }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="opacity-70">No data.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,255 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Knowledge Base - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+    <!-- Header -->
+    <div class="mb-8">
+        <h1 class="text-4xl font-bold mb-2">Knowledge Base</h1>
+        <p class="text-lg opacity-70">Find answers, documentation, and guides</p>
+
+        <!-- Quick Actions -->
+        <div class="mt-4 flex gap-3">
+            <a href="{% url 'kb:article_create' %}" class="btn btn-primary">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                New Article
+            </a>
+            <a href="{% url 'kb:article_list' %}" class="btn btn-outline">
+                Browse All Articles
+            </a>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card bg-base-100 shadow-xl mb-8">
+        <div class="card-body">
+            <form method="get" action="{% url 'kb:article_list' %}" class="w-full">
+                <div class="form-control">
+                    <div class="input-group w-full">
+                        <input type="text" name="q" placeholder="Search articles..."
+                            class="input input-bordered w-full input-lg" autofocus>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Quick filters -->
+            <div class="flex flex-wrap gap-2 mt-4">
+                <span class="text-sm opacity-70">Popular:</span>
+                {% for cat in categories|slice:":5" %}
+                <a href="{% url 'kb:category_articles' cat.slug %}" class="badge badge-outline hover:badge-primary">
+                    {{ cat.name }} ({{ cat.article_count }})
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats shadow w-full mb-8">
+        <div class="stat">
+            <div class="stat-figure text-primary">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                    </path>
+                </svg>
+            </div>
+            <div class="stat-title">Total Articles</div>
+            <div class="stat-value">{{ stats.total_articles }}</div>
+        </div>
+
+        <div class="stat">
+            <div class="stat-figure text-secondary">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                </svg>
+            </div>
+            <div class="stat-title">Categories</div>
+            <div class="stat-value">{{ stats.total_categories }}</div>
+        </div>
+
+        <div class="stat">
+            <div class="stat-figure text-accent">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                    </path>
+                </svg>
+            </div>
+            <div class="stat-title">Total Views</div>
+            <div class="stat-value">{{ stats.total_views|default:"0" }}</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Categories -->
+        <div class="lg:col-span-1">
+            <h2 class="text-2xl font-bold mb-4">Categories</h2>
+            <div class="space-y-2">
+                {% for category in categories %}
+                <a href="{% url 'kb:category_articles' category.slug %}"
+                    class="card bg-base-100 hover:shadow-lg transition-shadow">
+                    <div class="card-body p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                {% if category.icon %}
+                                <div class="text-primary">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <!-- Icon placeholder -->
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253">
+                                        </path>
+                                    </svg>
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <h3 class="font-semibold">{{ category.name }}</h3>
+                                    {% if category.description %}
+                                    <p class="text-sm opacity-70">{{ category.description|truncatewords:10 }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <span class="badge badge-ghost">{{ category.article_count }}</span>
+                        </div>
+                    </div>
+                </a>
+                {% empty %}
+                <p class="text-sm opacity-70">No categories yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Featured & Recent Articles -->
+        <div class="lg:col-span-2 space-y-8">
+            <!-- Featured Articles -->
+            {% if featured_articles %}
+            <div>
+                <h2 class="text-2xl font-bold mb-4">Featured Articles</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for article in featured_articles|slice:":4" %}
+                    <div class="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+                        <div class="card-body p-4">
+                            <h3 class="card-title text-base">
+                                <a href="{{ article.get_absolute_url }}" class="link link-hover">
+                                    {{ article.title }}
+                                </a>
+                            </h3>
+                            <p class="text-sm opacity-70">{{ article.summary|truncatewords:20 }}</p>
+                            <div class="flex items-center justify-between mt-2">
+                                <span class="badge badge-sm badge-primary">{{ article.get_difficulty_display }}</span>
+                                <span class="text-xs opacity-60">{{ article.views_count }} views</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Articles -->
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">Recent Articles</h2>
+                    <a href="{% url 'kb:article_list' %}" class="link link-primary text-sm">View all →</a>
+                </div>
+                <div class="space-y-3">
+                    {% for article in recent_articles %}
+                    <div class="card bg-base-100 shadow hover:shadow-lg transition-shadow">
+                        <div class="card-body p-4">
+                            <div class="flex items-start justify-between gap-4">
+                                <div class="flex-1">
+                                    <h3 class="font-semibold mb-1">
+                                        <a href="{{ article.get_absolute_url }}" class="link link-hover">
+                                            {{ article.title }}
+                                        </a>
+                                    </h3>
+                                    <p class="text-sm opacity-70 mb-2">{{ article.summary|truncatewords:25 }}</p>
+                                    <div class="flex items-center gap-4 text-xs opacity-60">
+                                        {% if article.category %}
+                                        <span>{{ article.category.name }}</span>
+                                        {% endif %}
+                                        <span>{{ article.published_at|timesince }} ago</span>
+                                        <span>{{ article.estimated_reading_time }} min read</span>
+                                    </div>
+                                </div>
+                                {% if article.is_pinned %}
+                                <span class="badge badge-accent badge-sm">Pinned</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-sm opacity-70">No articles published yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- My Drafts (if user has any) -->
+            {% if my_drafts %}
+            <div>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold">My Drafts</h2>
+                    <a href="{% url 'kb:article_list' %}?status=my_drafts" class="link link-primary text-sm">
+                        View all →
+                    </a>
+                </div>
+                <div class="space-y-2">
+                    {% for article in my_drafts %}
+                    <div class="flex items-center justify-between p-3 bg-base-200 rounded-lg">
+                        <div>
+                            <a href="{{ article.get_absolute_url }}" class="font-medium hover:underline">
+                                {{ article.title }}
+                            </a>
+                            <div class="text-xs opacity-60 mt-1">
+                                Last edited {{ article.updated_at|timesince }} ago
+                            </div>
+                        </div>
+                        <a href="{% url 'kb:article_edit' article.slug %}" class="btn btn-xs btn-ghost">
+                            Edit
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Live search functionality
+    document.addEventListener('DOMContentLoaded', function () {
+        const searchInput = document.querySelector('input[name="q"]');
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function (e) {
+                if (e.key === 'Enter') return;
+
+                const query = this.value;
+                if (query.length < 2) return;
+
+                // You can implement live search here
+                // fetch(`{% url 'kb:search_articles' %}?q=${query}`)
+                //     .then(response => response.json())
+                //     .then(data => {
+                //         // Display search results
+                //     });
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,112 +1,435 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}{% if is_create %}Create Article{% else %}Edit Article{% endif %} - Knowledge Base{% endblock %}
+{% block title %}{% if is_create %}Create Article{% else %}Edit: {{ article.title }}{% endif %} - Knowledge Base{%
+endblock %}
 
 {% block head %}
+<!-- SimpleMDE Markdown Editor -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
 <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
+
+<!-- Tagify for tags input -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css">
+<script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+
+<style>
+    .editor-toolbar {
+        background: var(--fallback-b2, oklch(var(--b2)));
+        border-color: var(--fallback-bc, oklch(var(--bc)/0.2));
+    }
+
+    .CodeMirror {
+        background: var(--fallback-b1, oklch(var(--b1)));
+        color: var(--fallback-bc, oklch(var(--bc)));
+        border-color: var(--fallback-bc, oklch(var(--bc)/0.2));
+    }
+
+    .editor-preview {
+        background: var(--fallback-b1, oklch(var(--b1)));
+    }
+
+    .editor-preview-side {
+        background: var(--fallback-b1, oklch(var(--b1)));
+        border-left: 1px solid var(--fallback-bc, oklch(var(--bc)/0.2));
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto py-6">
-    <h1 class="text-3xl font-bold mb-6">{% if is_create %}Create New Article{% else %}Edit Article{% endif %}</h1>
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="breadcrumbs text-sm mb-2">
+            <ul>
+                <li><a href="{% url 'kb:home' %}">Knowledge Base</a></li>
+                {% if not is_create %}
+                <li><a href="{{ article.get_absolute_url }}">{{ article.title|truncatewords:5 }}</a></li>
+                <li>Edit</li>
+                {% else %}
+                <li>Create Article</li>
+                {% endif %}
+            </ul>
+        </div>
 
-    <form method="post" class="space-y-4">
+        <h1 class="text-3xl font-bold">
+            {% if is_create %}Create New Article{% else %}Edit Article{% endif %}
+        </h1>
+    </div>
+
+    <form method="post" id="article-form" class="space-y-6">
         {% csrf_token %}
 
-        <div class="form-control">
-            <label class="label">
-                <span class="label-text">Title</span>
-            </label>
-            {{ form.title }}
-            {% if form.title.errors %}
-            <label class="label">
-                <span class="label-text-alt text-error">{{ form.title.errors.0 }}</span>
-            </label>
-            {% endif %}
-        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Main Content -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Title -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Title *</span>
+                    </label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.title.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                    <label class="label">
+                        <span class="label-text-alt">{{ form.title.help_text }}</span>
+                    </label>
+                </div>
 
-        <div class="form-control">
-            <label class="label">
-                <span class="label-text">Summary</span>
-            </label>
-            {{ form.summary }}
-            {% if form.summary.errors %}
-            <label class="label">
-                <span class="label-text-alt text-error">{{ form.summary.errors.0 }}</span>
-            </label>
-            {% endif %}
-        </div>
+                <!-- Slug -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">URL Slug</span>
+                        <button type="button" onclick="generateSlug()" class="btn btn-ghost btn-xs">
+                            Auto-generate
+                        </button>
+                    </label>
+                    {{ form.slug }}
+                    {% if form.slug.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.slug.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                    <label class="label">
+                        <span class="label-text-alt">{{ form.slug.help_text }}</span>
+                    </label>
+                </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Category</span>
-                </label>
-                {{ form.category }}
+                <!-- Summary -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Summary *</span>
+                        <span class="label-text-alt" id="summary-count">0 / 500</span>
+                    </label>
+                    {{ form.summary }}
+                    {% if form.summary.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.summary.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                    <label class="label">
+                        <span class="label-text-alt">Brief description shown in search results and article
+                            previews</span>
+                    </label>
+                </div>
+
+                <!-- Content -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Content *</span>
+                        <button type="button" onclick="togglePreview()" class="btn btn-ghost btn-xs">
+                            Preview
+                        </button>
+                    </label>
+                    {{ form.content }}
+                    {% if form.content.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.content.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+
+                    <!-- Markdown help -->
+                    <div class="collapse collapse-arrow bg-base-200 mt-4">
+                        <input type="checkbox" />
+                        <div class="collapse-title text-sm font-medium">
+                            Markdown Quick Reference
+                        </div>
+                        <div class="collapse-content">
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <h4 class="font-semibold mb-2">Basic Formatting</h4>
+                                    <pre class="bg-base-100 p-2 rounded">**bold text**
+*italic text*
+~~strikethrough~~
+`inline code`
+[link text](url)</pre>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-2">Headers & Lists</h4>
+                                    <pre class="bg-base-100 p-2 rounded"># Header 1
+## Header 2
+### Header 3
+
+- Bullet list
+1. Numbered list
+   - Nested item</pre>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-2">Code Blocks</h4>
+                                    <pre class="bg-base-100 p-2 rounded">```python
+def hello():
+    print("Hello")
+```</pre>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold mb-2">Tables</h4>
+                                    <pre class="bg-base-100 p-2 rounded">| Header 1 | Header 2 |
+|----------|----------|
+| Cell 1   | Cell 2   |</pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tags -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Tags</span>
+                    </label>
+                    {{ form.tags }}
+                    {% if form.tags.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.tags.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                    <label class="label">
+                        <span class="label-text-alt">Add tags to help users find this article</span>
+                    </label>
+                </div>
+
+                <!-- Related Articles -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">Related Articles</span>
+                    </label>
+                    {{ form.related_articles }}
+                    {% if form.related_articles.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.related_articles.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                    <label class="label">
+                        <span class="label-text-alt">Hold Ctrl/Cmd to select multiple articles</span>
+                    </label>
+                </div>
             </div>
 
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Status</span>
-                </label>
-                {{ form.status }}
+            <!-- Sidebar -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Status & Publishing -->
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg">Publishing</h3>
+
+                        <!-- Status -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Status</span>
+                            </label>
+                            {{ form.status }}
+                        </div>
+
+                        <!-- Category -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Category</span>
+                            </label>
+                            {{ form.category }}
+                        </div>
+
+                        <!-- Difficulty -->
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Difficulty Level</span>
+                            </label>
+                            {{ form.difficulty }}
+                        </div>
+
+                        <!-- Visibility Options -->
+                        <div class="divider">Visibility</div>
+
+                        <div class="form-control">
+                            <label class="cursor-pointer label">
+                                {{ form.is_featured }}
+                                <span class="label-text ml-2">Featured Article</span>
+                            </label>
+                            <span class="text-xs opacity-70 ml-6">{{ form.is_featured.help_text }}</span>
+                        </div>
+
+                        <div class="form-control">
+                            <label class="cursor-pointer label">
+                                {{ form.is_pinned }}
+                                <span class="label-text ml-2">Pin to Top</span>
+                            </label>
+                            <span class="text-xs opacity-70 ml-6">{{ form.is_pinned.help_text }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SEO -->
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg">SEO Settings</h3>
+
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Meta Description</span>
+                                <span class="label-text-alt" id="meta-count">0 / 160</span>
+                            </label>
+                            {{ form.meta_description }}
+                            <label class="label">
+                                <span class="label-text-alt">{{ form.meta_description.help_text }}</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Version Notes (for updates only) -->
+                {% if not is_create %}
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg">Version Notes</h3>
+
+                        <div class="form-control">
+                            <label class="label">
+                                <span class="label-text">Change Notes</span>
+                            </label>
+                            <textarea name="change_notes" class="textarea textarea-bordered" rows="3"
+                                placeholder="What changed in this version?"></textarea>
+                        </div>
+
+                        {% if versions %}
+                        <div class="divider">Recent Versions</div>
+                        <ul class="text-sm space-y-1">
+                            {% for version in versions|slice:":5" %}
+                            <li class="flex justify-between">
+                                <span>v{{ version.version_number }}</span>
+                                <span class="text-xs opacity-60">{{ version.created_at|timesince }} ago</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Actions -->
+                <div class="card bg-base-100 shadow">
+                    <div class="card-body">
+                        <button type="submit" name="action" value="save" class="btn btn-primary">
+                            {% if is_create %}Create Article{% else %}Save Changes{% endif %}
+                        </button>
+
+                        <button type="submit" name="action" value="save_and_continue" class="btn btn-outline">
+                            Save and Continue Editing
+                        </button>
+
+                        <a href="{% if is_create %}{% url 'kb:article_list' %}{% else %}{{ article.get_absolute_url }}{% endif %}"
+                            class="btn btn-ghost">
+                            Cancel
+                        </a>
+
+                        {% if not is_create %}
+                        <div class="divider"></div>
+                        <a href="{{ article.get_absolute_url }}" target="_blank" class="btn btn-sm btn-ghost">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14">
+                                </path>
+                            </svg>
+                            View Article
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <div class="form-control">
-            <label class="label">
-                <span class="label-text">Content (Markdown supported)</span>
-            </label>
-            {{ form.content }}
-            {% if form.content.errors %}
-            <label class="label">
-                <span class="label-text-alt text-error">{{ form.content.errors.0 }}</span>
-            </label>
-            {% endif %}
-        </div>
-
-        <div class="form-control">
-            <label class="label">
-                <span class="label-text">Tags (comma-separated)</span>
-            </label>
-            {{ form.tags }}
-        </div>
-
-        <div class="form-control">
-            <label class="cursor-pointer label justify-start">
-                {{ form.is_pinned }}
-                <span class="label-text ml-2">Pin this article</span>
-            </label>
-        </div>
-
-        {% if not is_create %}
-        <div class="form-control">
-            <label class="label">
-                <span class="label-text">Change notes (optional)</span>
-            </label>
-            <input type="text" name="change_notes" class="input input-bordered w-full"
-                placeholder="Brief description of changes">
-        </div>
-        {% endif %}
-
-        <div class="flex gap-2">
-            <button type="submit" class="btn btn-primary">
-                {% if is_create %}Create Article{% else %}Save Changes{% endif %}
-            </button>
-            <a href="{% if is_create %}{% url 'kb:article_list' %}{% else %}{{ article.get_absolute_url }}{% endif %}"
-                class="btn btn-ghost">Cancel</a>
         </div>
     </form>
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
+    // Initialize SimpleMDE
     var simplemde = new SimpleMDE({
         element: document.getElementById("id_content"),
         spellChecker: false,
-        status: false,
-        toolbar: ["bold", "italic", "heading", "|", "quote", "unordered-list", "ordered-list", "|",
-            "link", "image", "table", "|", "preview", "side-by-side", "fullscreen", "|", "guide"]
+        autosave: {
+            enabled: true,
+            uniqueId: "kb_article_{{ article.id|default:'new' }}",
+            delay: 1000,
+        },
+        toolbar: [
+            "bold", "italic", "heading", "|",
+            "quote", "unordered-list", "ordered-list", "|",
+            "link", "image", "table", "|",
+            "preview", "side-by-side", "fullscreen", "|",
+            "guide"
+        ],
+        previewRender: function (plainText, preview) {
+            // Custom preview rendering
+            fetch("{% url 'kb:article_preview' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: 'content=' + encodeURIComponent(plainText)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    preview.innerHTML = data.html;
+                });
+            return "Loading...";
+        }
+    });
+
+    // Initialize Tagify
+    var tagInput = document.querySelector('input[name="tags"]');
+    var tagify = new Tagify(tagInput, {
+        delimiters: ",| ",
+        maxTags: 10,
+        dropdown: {
+            maxItems: 20,
+            classname: "tags-look",
+            enabled: 0,
+            closeOnSelect: false
+        }
+    });
+
+    // Character counters
+    document.getElementById('id_summary').addEventListener('input', function () {
+        document.getElementById('summary-count').textContent = this.value.length + ' / 500';
+    });
+
+    document.getElementById('id_meta_description').addEventListener('input', function () {
+        document.getElementById('meta-count').textContent = this.value.length + ' / 160';
+    });
+
+    // Auto-generate slug
+    function generateSlug() {
+        var title = document.getElementById('id_title').value;
+        var slug = title.toLowerCase()
+            .replace(/[^\w\s-]/g, '') // Remove special characters
+            .replace(/\s+/g, '-') // Replace spaces with hyphens
+            .replace(/-+/g, '-') // Replace multiple hyphens with single
+            .substring(0, 50); // Limit length
+        document.getElementById('id_slug').value = slug;
+    }
+
+    // Initialize counters on load
+    document.addEventListener('DOMContentLoaded', function () {
+        var summary = document.getElementById('id_summary');
+        if (summary) {
+            document.getElementById('summary-count').textContent = summary.value.length + ' / 500';
+        }
+
+        var meta = document.getElementById('id_meta_description');
+        if (meta) {
+            document.getElementById('meta-count').textContent = meta.value.length + ' / 160';
+        }
+    });
+
+    // Prevent accidental navigation
+    window.addEventListener('beforeunload', function (e) {
+        if (simplemde.value() !== simplemde.options.autosave.value) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
     });
 </script>
 {% endblock %}

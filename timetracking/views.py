@@ -293,6 +293,7 @@ class TaskOptionsView(LoginRequiredMixin, View):
 # ------------------------------
 # Metrics helpers
 # ------------------------------
+from django.contrib.auth import get_user_model
 
 def _safe_int(val, default=None):
     try:
@@ -303,20 +304,6 @@ def _safe_int(val, default=None):
 def _default_range() -> Tuple[date, date]:
     today = date.today()
     return (today - timedelta(days=27), today)  # last 28 days
-
-def _apply_filters(qs, user, project_id, d_from, d_to, bill):
-    qs = qs.filter(user=user)
-    if project_id:
-        qs = qs.filter(project_id=project_id)
-    if d_from:
-        qs = qs.filter(work_date__gte=d_from)
-    if d_to:
-        qs = qs.filter(work_date__lte=d_to)
-    if bill == "yes":
-        qs = qs.filter(billable=True)
-    elif bill == "no":
-        qs = qs.filter(billable=False)
-    return qs
 
 def _fmt_hours(minutes: Optional[int]) -> float:
     return round((minutes or 0) / 60.0, 2)
@@ -332,6 +319,23 @@ def _normalize_series(values: List[int]) -> List[int]:
         return [0 for _ in values]
     return [int(round((v / m) * 100)) for v in values]
 
+def _can_view_all(request) -> bool:
+    profile = getattr(request.user, "profile", None)
+    return bool(getattr(profile, "is_project_manager", False)) or bool(getattr(request.user, "is_superuser", False))
+
+def _apply_user_scope(qs, request, user_mode: str, selected_user_id: Optional[int]):
+    """
+    user_mode: 'me' | 'one' | 'all'
+    If 'all' is not allowed, silently fall back to 'me'.
+    """
+    if user_mode == "all":
+        if not _can_view_all(request):
+            return qs.filter(user=request.user)
+        return qs
+    if user_mode == "one" and selected_user_id:
+        return qs.filter(user_id=selected_user_id)
+    # default 'me'
+    return qs.filter(user=request.user)
 
 # ------------------------------
 # Metrics views
@@ -343,12 +347,29 @@ class MetricsBase(LoginRequiredMixin, View):
     """
 
     def parse_params(self, request):
+        # Core filters
         pid = _safe_int(request.GET.get("project"))
         d_from = (request.GET.get("from") or "").strip()
         d_to = (request.GET.get("to") or "").strip()
         bill = (request.GET.get("bill") or "all").strip()          # all|yes|no
         interval = (request.GET.get("interval") or "week").strip() # day|week|month
 
+        # User scope (lock down "one"/"all" unless allowed)
+        u_raw = (request.GET.get("user") or "me").strip()          # "me" | "all" | "<id>"
+        can_all = _can_view_all(request)
+        if u_raw == "all":
+            user_mode, selected_user_id = ("all" if can_all else "me"), None
+        elif u_raw.isdigit():
+            uid = int(u_raw)
+            if can_all or uid == request.user.id:
+                # treat selecting yourself as "me" to keep UI consistent
+                user_mode, selected_user_id = ("me" if uid == request.user.id else "one"), uid
+            else:
+                user_mode, selected_user_id = "me", request.user.id
+        else:
+            user_mode, selected_user_id = "me", request.user.id
+
+        # Dates default
         if not d_from or not d_to:
             df, dt = _default_range()
             d_from = d_from or df.isoformat()
@@ -365,32 +386,81 @@ class MetricsBase(LoginRequiredMixin, View):
             "int_month": interval == "month",
         }
 
-        return pid, d_from, d_to, bill, bill_flags, interval, interval_flags
+        return (
+            pid, d_from, d_to, bill, bill_flags,
+            interval, interval_flags,
+            user_mode, selected_user_id, can_all
+        )
 
     def filtered_qs(self, request):
-        pid, d_from, d_to, bill, *_ = self.parse_params(request)
-        qs = TimeEntry.objects.select_related("project", "task")
-        return _apply_filters(qs, request.user, pid, d_from, d_to, bill)
+        (
+            pid, d_from, d_to, bill, *_,
+            user_mode, selected_user_id, _
+        ) = self.parse_params(request)
 
-    def _projects_for_filter(self, request, d_from: str, d_to: str) -> List[Dict[str, Any]]:
+        qs = TimeEntry.objects.select_related("project", "task")
+        qs = _apply_user_scope(qs, request, user_mode, selected_user_id)
+        if pid:
+            qs = qs.filter(project_id=pid)
+        if d_from:
+            qs = qs.filter(work_date__gte=d_from)
+        if d_to:
+            qs = qs.filter(work_date__lte=d_to)
+        if bill == "yes":
+            qs = qs.filter(billable=True)
+        elif bill == "no":
+            qs = qs.filter(billable=False)
+        return qs
+
+    def _projects_for_filter(self, request, d_from: str, d_to: str, user_mode: str, selected_user_id: Optional[int]) -> List[Dict[str, Any]]:
+        qs = TimeEntry.objects.filter(work_date__gte=d_from, work_date__lte=d_to)
+        qs = _apply_user_scope(qs, request, user_mode, selected_user_id)
         rows = (
-            TimeEntry.objects.filter(user=request.user, work_date__gte=d_from, work_date__lte=d_to)
-            .values("project_id", "project__title")
-            .annotate(total=Sum("duration_minutes"))
-            .order_by("project__title")
+            qs.values("project_id", "project__title")
+              .annotate(total=Sum("duration_minutes"))
+              .order_by("project__title")
         )
         return [{"id": r["project_id"], "title": r["project__title"]} for r in rows]
+
+    def _users_for_filter(self, request, d_from: str, d_to: str, pid: Optional[int]) -> List[Dict[str, Any]]:
+        User = get_user_model()
+        base = TimeEntry.objects.filter(work_date__gte=d_from, work_date__lte=d_to)
+        if pid:
+            base = base.filter(project_id=pid)
+        user_ids = list(base.values_list("user_id", flat=True).distinct())
+        if not user_ids:
+            return []
+        users = (
+            User.objects.filter(id__in=user_ids)
+            .values("id", "first_name", "last_name", "username")
+            .order_by("first_name", "last_name", "username")
+        )
+        def _name(u):
+            full = f"{u.get('first_name','').strip()} {u.get('last_name','').strip()}".strip()
+            return full or u.get("username") or f"User {u['id']}"
+        return [{"id": u["id"], "name": _name(u)} for u in users]
 
 
 class MetricsHomeView(MetricsBase):
     template_name = "timetracking/metrics/home.html"
 
     def get(self, request, *args, **kwargs):
-        pid, d_from, d_to, bill, bill_flags, interval, interval_flags = self.parse_params(request)
+        (
+            pid, d_from, d_to, bill, bill_flags, interval, interval_flags,
+            user_mode, selected_user_id, can_all
+        ) = self.parse_params(request)
 
-        projects = self._projects_for_filter(request, d_from, d_to)
+        projects = self._projects_for_filter(request, d_from, d_to, user_mode, selected_user_id)
         for p in projects:
             p["selected"] = (pid is not None and p["id"] == pid)
+
+        users = self._users_for_filter(request, d_from, d_to, pid)
+        for u in users:
+            u["selected"] = (user_mode == "one" and selected_user_id == u["id"])
+
+        # Booleans for template (avoid any '==' in templates)
+        um_me = (user_mode == "me")
+        um_all = (user_mode == "all")
 
         # ---- user/role context (same pattern as TimeEntryView) ----
         profile = getattr(request.user, "profile", None)
@@ -402,6 +472,7 @@ class MetricsHomeView(MetricsBase):
 
         ctx = {
             "projects": projects,
+            "users": users,
             "selected_project_id": pid,
             "from": d_from,
             "to": d_to,
@@ -410,13 +481,19 @@ class MetricsHomeView(MetricsBase):
             "interval": interval,
             **interval_flags,
 
+            # user scoping info (string kept for backend needs; booleans for template)
+            "user_mode": user_mode,                 # "me" | "one" | "all"
+            "selected_user_id": selected_user_id,   # int or None
+            "can_view_all": can_all,
+            "um_me": um_me,
+            "um_all": um_all,
+
             # expose to template
             "user_display_name": user_display_name,
             "user_role": role_code,
             "user_role_display": role_display,
             "is_pm": is_pm,
             "is_dev": is_dev,
-            # convenience flag if you want to show PM-only UI bits
             "can_manage_metrics": is_pm,
         }
         return render(request, self.template_name, ctx)
@@ -472,7 +549,7 @@ class MetricsSummaryView(MetricsBase):
 
 class MetricsTableView(MetricsBase):
     def get(self, request, kind: str, *args, **kwargs):
-        if kind not in ("projects", "tasks"):
+        if kind not in ("projects", "tasks", "users", "upt"):
             return HttpResponseBadRequest("Invalid table kind.")
 
         qs = self.filtered_qs(request)
@@ -486,8 +563,22 @@ class MetricsTableView(MetricsBase):
         if q:
             if kind == "projects":
                 qs = qs.filter(project__title__icontains=q)
-            else:
+            elif kind == "tasks":
                 qs = qs.filter(Q(task__title__icontains=q) | Q(project__title__icontains=q))
+            elif kind == "users":
+                qs = qs.filter(
+                    Q(user__first_name__icontains=q) |
+                    Q(user__last_name__icontains=q) |
+                    Q(user__username__icontains=q)
+                )
+            else:  # "upt" (user-project-task)
+                qs = qs.filter(
+                    Q(user__first_name__icontains=q) |
+                    Q(user__last_name__icontains=q) |
+                    Q(user__username__icontains=q) |
+                    Q(project__title__icontains=q) |
+                    Q(task__title__icontains=q)
+                )
 
         # sort helpers
         def next_sort_for(key: str, current: str) -> str:
@@ -538,7 +629,8 @@ class MetricsTableView(MetricsBase):
             keys = ["project", "hours", "billable", "entries", "tasks", "first", "last"]
             title = "By Project"
             template = "timetracking/metrics/_table_projects.html"
-        else:
+
+        elif kind == "tasks":
             rows_qs = (
                 qs.values("task_id", "task__title", "project__title", "project_id")
                   .annotate(
@@ -573,9 +665,106 @@ class MetricsTableView(MetricsBase):
             title = "By Task"
             template = "timetracking/metrics/_table_tasks.html"
 
-        sort_states = {k: {"next": next_sort_for(k, sort), "dir": dir_for(k, sort)} for k in keys}
-        top_options = [{"value": n, "label": f"Top {n}", "selected": (n == (top or 20))}
-                       for n in (10, 20, 50, 100, 200)]
+        elif kind == "users":
+            rows_qs = (
+                qs.values("user_id", "user__first_name", "user__last_name", "user__username")
+                  .annotate(
+                      minutes=Sum("duration_minutes"),
+                      billable=Sum("duration_minutes", filter=Q(billable=True)),
+                      entries=Count("id"),
+                      projects=Count("project", distinct=True),
+                      tasks=Count("task", distinct=True),
+                      first=Min("work_date"),
+                      last=Max("work_date"),
+                  )
+            )
+            order_map = {
+                "hours": "minutes", "-hours": "-minutes",
+                "billable": "billable", "-billable": "-billable",
+                "entries": "entries", "-entries": "-entries",
+                "projects": "projects", "-projects": "-projects",
+                "tasks": "tasks", "-tasks": "-tasks",
+                "first": "first", "-first": "-first",
+                "last": "last", "-last": "-last",
+                "user": "user__first_name", "-user": "-user__first_name",
+            }
+            rows_qs = rows_qs.order_by(order_map.get(sort, "-minutes"),
+                                       "user__first_name", "user__last_name", "user__username")[: top or 20]
+            def _name(r):
+                full = f"{(r.get('user__first_name') or '').strip()} {(r.get('user__last_name') or '').strip()}".strip()
+                return full or r.get("user__username") or f"User {r['user_id']}"
+            rows = [{
+                "user": _name(r),
+                "hours": _fmt_hours(r["minutes"] or 0),
+                "billable": _fmt_hours(r["billable"] or 0),
+                "entries": r["entries"] or 0,
+                "projects": r["projects"] or 0,
+                "tasks": r["tasks"] or 0,
+                "first": r["first"],
+                "last": r["last"],
+            } for r in rows_qs]
+            keys = ["user", "hours", "billable", "entries", "projects", "tasks", "first", "last"]
+            title = "By User"
+            template = "timetracking/metrics/_table_users.html"
+
+        else:  # kind == "upt" (User × Project × Task)
+            rows_qs = (
+                qs.values(
+                    "user_id", "user__first_name", "user__last_name", "user__username",
+                    "project_id", "project__title",
+                    "task_id", "task__title",
+                )
+                .annotate(
+                    minutes=Sum("duration_minutes"),
+                    billable=Sum("duration_minutes", filter=Q(billable=True)),
+                    entries=Count("id"),
+                    first=Min("work_date"),
+                    last=Max("work_date"),
+                )
+            )
+            order_map = {
+                "hours": "minutes", "-hours": "-minutes",
+                "billable": "billable", "-billable": "-billable",
+                "entries": "entries", "-entries": "-entries",
+                "first": "first", "-first": "-first",
+                "last": "last", "-last": "-last",
+                "user": "user__first_name", "-user": "-user__first_name",
+                "project": "project__title", "-project": "-project__title",
+                "task": "task__title", "-task": "-task__title",
+            }
+            rows_qs = rows_qs.order_by(
+                order_map.get(sort, "-minutes"),
+                "user__first_name", "user__last_name", "user__username",
+                "project__title", "task__title"
+            )[: top or 50]
+
+            def _uname(r):
+                full = f"{(r.get('user__first_name') or '').strip()} {(r.get('user__last_name') or '').strip()}".strip()
+                return full or r.get("user__username") or f"User {r['user_id']}"
+
+            rows = [{
+                "user": _uname(r),
+                "project": r["project__title"],
+                "task": r["task__title"],
+                "hours": _fmt_hours(r["minutes"] or 0),
+                "billable": _fmt_hours(r["billable"] or 0),
+                "entries": r["entries"] or 0,
+                "first": r["first"],
+                "last": r["last"],
+            } for r in rows_qs]
+            keys = ["user", "project", "task", "hours", "billable", "entries", "first", "last"]
+            title = "User × Project × Task"
+            template = "timetracking/metrics/_table_upt.html"
+
+        # Precompute sort UI so templates don't need {% if %} at all
+        sort_dir = {k: dir_for(k, sort) for k in keys}                       # "asc" | "desc" | None
+        sort_suffix = {k: (f" ({v})" if v else "") for k, v in sort_dir.items()}
+        sort_next = {k: next_sort_for(k, sort) for k in keys}
+
+        top_options = [
+            {"value": n, "label": f"Top {n}", "selected": (n == (top or (50 if kind == 'upt' else 20)))}
+            for n in (10, 20, 50, 100, 200)
+        ]
 
         ctx = {
             "kind": kind,
@@ -585,7 +774,9 @@ class MetricsTableView(MetricsBase):
             "sort": sort,
             "top": top,
             "top_options": top_options,
-            "sort_states": sort_states,
+            "sort_next": sort_next,
+            "sort_suffix": sort_suffix,
+            "sort_dir": sort_dir,  # kept in case you want to show arrows/icons later
         }
         return render(request, template, ctx)
 
@@ -594,7 +785,7 @@ class MetricsTrendView(MetricsBase):
 
     def get(self, request, *args, **kwargs):
         qs = self.filtered_qs(request)
-        _, d_from, d_to, _, _, interval, _ = self.parse_params(request)
+        _, d_from, d_to, _, _, interval, _ , _, _, _ = self.parse_params(request)
 
         if interval == "day":
             trunc = TruncDate("work_date")

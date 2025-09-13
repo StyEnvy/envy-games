@@ -17,7 +17,7 @@
         <div class="flex items-start justify-between gap-3">
             <div>
                 <h1 class="text-2xl md:text-3xl font-bold">Time Metrics</h1>
-                <p class="opacity-70 text-sm mt-1">Analyze hours by project, task, and time period.</p>
+                <p class="opacity-70 text-sm mt-1">Analyze hours by user, project, task, and time period.</p>
 
                 <!-- Signed-in user & role -->
                 <div class="mt-2 flex items-center gap-2">
@@ -29,19 +29,34 @@
             </div>
 
             <a href="{% url 'timetracking:home' %}" class="btn btn-sm btn-outline mt-1"
-                aria-label="Record a time entry">Back to Time Entry</a>
+                aria-label="Record a time entry">
+                Back to Time Entry
+            </a>
         </div>
     </div>
 
     <!-- Filters -->
     <form id="metrics-filters" class="card bg-base-100 shadow mb-4" aria-label="Metrics filters">
-        <div class="card-body grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="card-body grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
                 <label class="label" for="mf-project"><span class="label-text">Project</span></label>
                 <select name="project" id="mf-project" class="select select-bordered w-full">
                     <option value="">All projects</option>
                     {% for p in projects %}
                     <option value="{{ p.id }}" {% if p.selected %} selected{% endif %}>{{ p.title }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="label" for="mf-user"><span class="label-text">User</span></label>
+                <select name="user" id="mf-user" class="select select-bordered w-full">
+                    <option value="me" {% if um_me %} selected{% endif %}>Me</option>
+                    {% if can_view_all %}
+                    <option value="all" {% if um_all %} selected{% endif %}>All users</option>
+                    {% endif %}
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if u.selected %} selected{% endif %}>{{ u.name }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -94,7 +109,7 @@
         </div>
     </form>
 
-    <!-- Summary KPIs (no hx-push-url here!) -->
+    <!-- Summary KPIs -->
     <div id="metrics-summary" hx-get="{% url 'timetracking:metrics_summary' %}" hx-include="#metrics-filters"
         hx-trigger="load, change from:#metrics-filters input, change from:#metrics-filters select"
         hx-target="#metrics-summary" hx-swap="outerHTML" hx-sync="this:queue">
@@ -127,6 +142,23 @@
                 <div class="card-body">Loading tasks…</div>
             </div>
         </div>
+
+        <div id="metrics-table-users" hx-get="{% url 'timetracking:metrics_table' 'users' %}"
+            hx-include="#metrics-filters"
+            hx-trigger="load, change from:#metrics-filters input, change from:#metrics-filters select"
+            hx-target="#metrics-table-users" hx-swap="outerHTML" hx-sync="this:queue">
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">Loading users…</div>
+            </div>
+        </div>
+
+        <div id="metrics-table-upt" hx-get="{% url 'timetracking:metrics_table' 'upt' %}" hx-include="#metrics-filters"
+            hx-trigger="load, change from:#metrics-filters input, change from:#metrics-filters select"
+            hx-target="#metrics-table-upt" hx-swap="outerHTML" hx-sync="this:queue">
+            <div class="card bg-base-100 shadow">
+                <div class="card-body">Loading users × projects × tasks…</div>
+            </div>
+        </div>
     </div>
 
 </div>
@@ -140,6 +172,7 @@
         const elFrom = document.getElementById('mf-from');
         const elTo = document.getElementById('mf-to');
         const elProj = document.getElementById('mf-project');
+        const elUser = document.getElementById('mf-user');
         const btnApply = document.getElementById('mf-apply');
         const btnReset = document.getElementById('mf-reset');
         const btnsRange = form.querySelectorAll('[data-range]');
@@ -164,26 +197,25 @@
         btnReset.addEventListener('click', () => {
             const t = new Date(); const a = new Date(t); a.setDate(a.getDate() - 27);
             elFrom.value = fmt(a); elTo.value = fmt(t);
-            elProj.value = ''; document.getElementById('mf-bill').value = 'all'; document.getElementById('mf-interval').value = 'week';
+            elProj.value = '';
+            if (elUser) elUser.value = 'me';
+            document.getElementById('mf-bill').value = 'all';
+            document.getElementById('mf-interval').value = 'week';
             htmx.trigger(form, 'change');
         });
 
-        // Build the current querystring from the filters
         function currentQuery() {
             const data = new FormData(form);
             const q = new URLSearchParams(data);
             return '?' + q.toString();
         }
 
-        // Keep the URL on the full page route, with only query params updated
         function updateAddressBar() {
             history.replaceState({}, '', HOME_URL + currentQuery());
         }
 
-        // Update URL whenever filters change
         form.addEventListener('change', updateAddressBar);
 
-        // Share link copies the full-page URL (not a fragment)
         btnShare.addEventListener('click', (e) => {
             e.preventDefault();
             const url = HOME_URL + currentQuery();
@@ -194,7 +226,6 @@
             history.replaceState({}, '', url);
         });
 
-        // Helper used by summary/table clicks
         window.egSetProjectAndRefresh = function (pid) {
             if (!pid) return;
             elProj.value = String(pid);
